@@ -27,15 +27,14 @@ class VoodooBoardHomePage extends StatefulWidget {
 
 class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
   final List<String> members = [
-    'Alice Zephyr',
-    'Bob Yarrow',
-    'Charlie Xander',
-    'Dana Willow',
-    'Eli Vega'
+    'Omar',
+    'Mara'
   ];
   final Map<String, List<String>> messages = HashMap();
   String? selectedMember;
   final TextEditingController messageController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
+  final TextEditingController newNameController = TextEditingController();
 
   void addMessage(String member, String msg) {
     if (!messages.containsKey(member)) {
@@ -47,10 +46,36 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
     messageController.clear();
   }
 
+  void deleteMessage(String member, int index) {
+    setState(() {
+      messages[member]?.removeAt(index);
+    });
+  }
+
   void toggleMember(String member) {
     setState(() {
       selectedMember = member;
     });
+  }
+
+  void addMember(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    if (members.any((m) => m.toLowerCase() == trimmed.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Name "$trimmed" already exists on the board.')),
+      );
+      return;
+    }
+    setState(() {
+      members.add(trimmed);
+    });
+    newNameController.clear();
+  }
+
+  List<String> get filteredMembers {
+    final query = searchController.text.toLowerCase();
+    return members.where((name) => name.toLowerCase().contains(query)).toList();
   }
 
   @override
@@ -59,29 +84,80 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
       appBar: AppBar(
         title: Text('🔮 Voodoo Board'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.person_add_alt_1_rounded),
+            tooltip: 'Add Your Name',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Add Your Name'),
+                  content: TextField(
+                    controller: newNameController,
+                    decoration: InputDecoration(hintText: 'Enter your full name'),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        addMember(newNameController.text);
+                        Navigator.pop(context);
+                      },
+                      child: Text('Add'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        ],
       ),
       body: Row(
         children: [
-          // Member list with pins
+          // Member list with pins and search bar
           Expanded(
             flex: 2,
-            child: ListView(
-              padding: EdgeInsets.all(12),
-              children: members.map((member) {
-                bool hasMessage = messages[member]?.isNotEmpty ?? false;
-                return Card(
-                  child: ListTile(
-                    onTap: () => toggleMember(member),
-                    leading: Icon(
-                      hasMessage ? Icons.push_pin : Icons.radio_button_unchecked,
-                      color: hasMessage ? Colors.red : Colors.grey,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Search names...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    title: Text(member),
-                    selected: selectedMember == member,
-                    selectedTileColor: Colors.deepPurple.withOpacity(0.1),
                   ),
-                );
-              }).toList(),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.all(12),
+                    children: filteredMembers.map((member) {
+                      bool hasMessage = messages[member]?.isNotEmpty ?? false;
+                      return Card(
+                        child: ListTile(
+                          onTap: () => toggleMember(member),
+                          leading: Icon(
+                            hasMessage ? Icons.push_pin : Icons.radio_button_unchecked,
+                            color: hasMessage ? Colors.red : Colors.grey,
+                          ),
+                          title: Text(member),
+                          selected: selectedMember == member,
+                          selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -99,19 +175,27 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Messages for $selectedMember',
-                            style: Theme.of(context).textTheme.headlineMedium),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(color: Colors.black)),
                         const SizedBox(height: 10),
                         Expanded(
-                          child: ListView(
-                            children: (messages[selectedMember] ?? [])
-                                .map((msg) => Card(
-                                      color: Colors.white,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12.0),
-                                        child: Text(msg),
-                                      ),
-                                    ))
-                                .toList(),
+                          child: ListView.builder(
+                            itemCount: messages[selectedMember]?.length ?? 0,
+                            itemBuilder: (context, index) {
+                              final msg = messages[selectedMember]![index];
+                              return Card(
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                child: ListTile(
+                                  title: Text(msg),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => deleteMessage(selectedMember!, index),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         Divider(),
@@ -143,3 +227,4 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
     );
   }
 }
+// This is a simple Voodoo Board app that allows users to leave messages for each other.
