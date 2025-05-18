@@ -180,7 +180,7 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                                 .headlineMedium
                                 ?.copyWith(color: Colors.black)),
                         const SizedBox(height: 10),
-                        Expanded (
+                        Expanded(
                           child: ListView.builder(
                             itemCount: messages[selectedMember]?.length ?? 0,
                             itemBuilder: (context, index) {
