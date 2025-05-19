@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "547078088322",
+    "project_id": "voodoo-board",
+    "storage_bucket": "voodoo-board.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:547078088322:android:8d85e764e0561aac25369b",
+        "android_client_info": {
+          "package_name": "com.example.voodooboard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkZr-ejyczOW8XfDcXfg8NKwW7x8oRQYU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
