@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'message_panel.dart';
 import 'user_directory_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class VoodooBoardHomePage extends StatefulWidget {
   final String name;
-
   const VoodooBoardHomePage({super.key, required this.name});
 
   @override
@@ -19,14 +19,8 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
   @override
   void initState() {
     super.initState();
-    selectedMember = widget.name;
-    members.add(widget.name);
-  }
-
-  void pinMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pin message tapped')),
-    );
+    selectedMember = widget.name.toLowerCase();
+    members.add(selectedMember);
   }
 
   Future<void> addUser() async {
@@ -36,26 +30,52 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
       builder: (_) => AlertDialog(
         title: const Text('Add User'),
         content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Enter name'),
-        ),
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'Enter name')),
         actions: [
           TextButton(
-            onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty && !members.contains(newName)) {
+            onPressed: () async {
+              final newName = controller.text.trim().toLowerCase();
+
+              if (newName.isEmpty) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Name cannot be empty.')),
+                );
+                return;
+              }
+
+              if (members.contains(newName)) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Name already exists.')),
+                );
+                return;
+              }
+
+              try {
+                final membersCollection =
+                    FirebaseFirestore.instance.collection('members');
+                final existingMember =
+                    await membersCollection.doc(newName).get();
+
+                if (!existingMember.exists) {
+                  await membersCollection.doc(newName).set({});
+                  print('Added $newName to Firestore.');
+                } else {
+                  print('$newName already exists in Firestore.');
+                }
+
                 Navigator.of(context).pop();
                 setState(() {
                   members.add(newName);
                   selectedMember = newName;
                 });
-              } else {
+              } catch (e) {
+                print('Error adding $newName: $e');
+                Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(newName.isEmpty
-                        ? 'Name cannot be empty.'
-                        : 'Name already exists.'),
-                  ),
+                  SnackBar(content: Text('Error adding user: $e')),
                 );
               }
             },
@@ -68,13 +88,9 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
 
   Future<void> openUserDirectory() async {
     final selected = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => const UserDirectoryPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const UserDirectoryPage()),
     );
-
     if (selected != null) {
-      // Handle the selected user (if you implement returning it from UserDirectoryPage)
       print('Selected user: $selected');
     }
   }
@@ -82,30 +98,10 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('🔮 $selectedMember'),
-        centerTitle: true,
-      ),
-      body: MessagePanel(
-        memberId: selectedMember,
-      ),
+      appBar: AppBar(title: Text('🔮 $selectedMember'), centerTitle: true),
+      body: MessagePanel(memberId: selectedMember),
       floatingActionButton: Stack(
         children: [
-          // Pin Button
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 80),
-              child: FloatingActionButton(
-                heroTag: 'pinBtn',
-                onPressed: pinMessage,
-                tooltip: 'Pin Message',
-                child: const Icon(Icons.push_pin),
-              ),
-            ),
-          ),
-
-          // Expandable FAB
           Align(
             alignment: Alignment.bottomRight,
             child: Column(
@@ -129,9 +125,7 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                 ],
                 FloatingActionButton(
                   heroTag: 'toggleFab',
-                  onPressed: () {
-                    setState(() => showFabMenu = !showFabMenu);
-                  },
+                  onPressed: () => setState(() => showFabMenu = !showFabMenu),
                   tooltip: 'More',
                   child: Icon(showFabMenu ? Icons.close : Icons.menu),
                 ),

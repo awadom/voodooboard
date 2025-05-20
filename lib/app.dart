@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:voodoo_board/utils/theme.dart'; // Import your theme file
 import 'routes.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+
 class VoodooBoardApp extends StatelessWidget {
   const VoodooBoardApp({super.key});
 
@@ -15,6 +17,7 @@ class VoodooBoardApp extends StatelessWidget {
       themeMode: ThemeMode.system, // Auto-switch based on system settings
       initialRoute: AppRoutes.home,
       onGenerateRoute: AppRoutes.generateRoute,
+      navigatorObservers: [routeObserver],
     );
   }
 }

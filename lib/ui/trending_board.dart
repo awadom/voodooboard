@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../routes.dart';
 import '../services/firestore_service.dart';
+import '../app.dart'; // to access routeObserver
 
 class TrendingBoardsPage extends StatefulWidget {
   const TrendingBoardsPage({super.key});
@@ -12,14 +13,39 @@ class TrendingBoardsPage extends StatefulWidget {
   State<TrendingBoardsPage> createState() => _TrendingBoardsPageState();
 }
 
-class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
+class _TrendingBoardsPageState extends State<TrendingBoardsPage>
+    with RouteAware {
   late Future<Map<String, List<String>>> _trendingNamesFuture;
   final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
-    _trendingNamesFuture = _firestoreService.getTrendingNames(topN: 10);
+    _fetchTrendingNames();
+  }
+
+  void _fetchTrendingNames() {
+    setState(() {
+      _trendingNamesFuture = _firestoreService.getTrendingNames(topN: 10);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when the page is visible again
+    _fetchTrendingNames();
   }
 
   void _navigateToBoard(BuildContext context, String name) {
@@ -36,7 +62,6 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Search or Add Name'),
         content: TextField(
           controller: nameController,
           decoration: const InputDecoration(
@@ -61,12 +86,12 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
   }
 
   void _submitName(TextEditingController controller) async {
-    final name = controller.text.trim();
+    final name = controller.text.trim().toLowerCase(); // Force lowercase
     if (name.isNotEmpty) {
       try {
-        final membersCollection = FirebaseFirestore.instance.collection('members');
-        
-        // Check if the member already exists
+        final membersCollection =
+            FirebaseFirestore.instance.collection('members');
+
         final existingMember = await membersCollection.doc(name).get();
         if (!existingMember.exists) {
           await membersCollection.doc(name).set({});
@@ -75,7 +100,6 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
           print('$name already exists.');
         }
 
-        // Close the dialog and navigate
         Navigator.of(context).pop();
         _navigateToBoard(context, name);
       } catch (e) {
@@ -83,7 +107,6 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -159,11 +182,20 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showSearchOrAddNameDialog,
-        label: const Text('🔮 Search or Add Name'),
-        icon: const Icon(Icons.search),
-        backgroundColor: Colors.deepPurple,
+      floatingActionButton: SizedBox(
+        width: 100,
+        height: 100,
+        child: FloatingActionButton(
+          onPressed: _showSearchOrAddNameDialog,
+          backgroundColor: const Color.fromARGB(255, 252, 235, 254),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), // Square with soft corners
+          ),
+          child: const Text(
+            '🔮',
+            style: TextStyle(fontSize: 40),
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
