@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'message_panel.dart';
 import 'user_directory_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../routes.dart';
 
 class VoodooBoardHomePage extends StatefulWidget {
   final String name;
@@ -23,66 +24,63 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
     members.add(selectedMember);
   }
 
-  Future<void> addUser() async {
-    final controller = TextEditingController();
-    await showDialog(
+  void _showSearchOrAddNameDialog() {
+    final TextEditingController nameController = TextEditingController();
+
+    showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Add User'),
+      builder: (context) => AlertDialog(
         content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: 'Enter name')),
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Enter a name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          onSubmitted: (_) => _submitName(nameController),
+        ),
         actions: [
           TextButton(
-            onPressed: () async {
-              final newName = controller.text.trim().toLowerCase();
-
-              if (newName.isEmpty) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name cannot be empty.')),
-                );
-                return;
-              }
-
-              if (members.contains(newName)) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name already exists.')),
-                );
-                return;
-              }
-
-              try {
-                final membersCollection =
-                    FirebaseFirestore.instance.collection('members');
-                final existingMember =
-                    await membersCollection.doc(newName).get();
-
-                if (!existingMember.exists) {
-                  await membersCollection.doc(newName).set({});
-                  print('Added $newName to Firestore.');
-                } else {
-                  print('$newName already exists in Firestore.');
-                }
-
-                Navigator.of(context).pop();
-                setState(() {
-                  members.add(newName);
-                  selectedMember = newName;
-                });
-              } catch (e) {
-                print('Error adding $newName: $e');
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error adding user: $e')),
-                );
-              }
-            },
-            child: const Text('Add'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _submitName(nameController),
+            child: const Text('Go to Board'),
           ),
         ],
       ),
+    );
+  }
+
+  void _submitName(TextEditingController controller) async {
+    final name = controller.text.trim().toLowerCase(); // Force lowercase
+    if (name.isNotEmpty) {
+      try {
+        final membersCollection =
+            FirebaseFirestore.instance.collection('members');
+
+        final existingMember = await membersCollection.doc(name).get();
+        if (!existingMember.exists) {
+          await membersCollection.doc(name).set({});
+          print('Added $name to Firestore.');
+        } else {
+          print('$name already exists.');
+        }
+
+        Navigator.of(context).pop();
+        _navigateToBoard(context, name);
+      } catch (e) {
+        print('Error adding $name: $e');
+      }
+    }
+  }
+
+  void _navigateToBoard(BuildContext context, String name) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.nameBoard,
+      arguments: name,
     );
   }
 
@@ -95,41 +93,82 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
     }
   }
 
+  Widget _buildMiniFab({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    required String heroTag,
+  }) {
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: FloatingActionButton(
+        heroTag: heroTag,
+        tooltip: tooltip,
+        onPressed: onPressed,
+        child: Icon(icon, size: 36),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('🔮 $selectedMember'), centerTitle: true),
       body: MessagePanel(memberId: selectedMember),
       floatingActionButton: Stack(
+        alignment: Alignment.bottomRight,
         children: [
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (showFabMenu) ...[
-                  FloatingActionButton.extended(
-                    heroTag: 'addUserBtn',
-                    onPressed: addUser,
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Add User'),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.extended(
-                    heroTag: 'searchUserBtn',
-                    onPressed: openUserDirectory,
-                    icon: const Icon(Icons.search),
-                    label: const Text('Users'),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                FloatingActionButton(
-                  heroTag: 'toggleFab',
-                  onPressed: () => setState(() => showFabMenu = !showFabMenu),
-                  tooltip: 'More',
-                  child: Icon(showFabMenu ? Icons.close : Icons.menu),
-                ),
-              ],
+          if (showFabMenu) ...[
+            // Top of toggle
+            Positioned(
+              bottom: 35 + 72 + 10,
+              right: 0,
+              child: _buildMiniFab(
+                icon: Icons.person_add,
+                tooltip: 'Add User',
+                onPressed: _showSearchOrAddNameDialog,
+                heroTag: 'addUserBtn',
+              ),
+            ),
+            // Left of toggle
+            Positioned(
+              bottom: 35,
+              right: 72 + 10,
+              child: _buildMiniFab(
+                icon: Icons.search,
+                tooltip: 'Search Users',
+                onPressed: openUserDirectory,
+                heroTag: 'searchUserBtn',
+              ),
+            ),
+            // Diagonal up-left (example extra button)
+            // Positioned(
+            //   bottom: 35 + 72 + 10,
+            //   right: 72 + 10,
+            //   child: _buildMiniFab(
+            //     icon: Icons.settings,
+            //     tooltip: 'Settings',
+            //     onPressed: () {
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         const SnackBar(content: Text('Settings clicked')),
+            //       );
+            //     },
+            //     heroTag: 'settingsBtn',
+            //   ),
+            // ),
+            // You can add more buttons in a grid pattern like this:
+            // (e.g., 2nd row left, 2nd row above, diagonal, etc.)
+          ],
+          // Toggle FAB always present
+          Positioned(
+            bottom: 35,
+            right: 0,
+            child: _buildMiniFab(
+              icon: showFabMenu ? Icons.close : Icons.menu,
+              tooltip: 'Toggle Menu',
+              onPressed: () => setState(() => showFabMenu = !showFabMenu),
+              heroTag: 'toggleFab',
             ),
           ),
         ],

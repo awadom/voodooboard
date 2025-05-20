@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/theme.dart';
 import 'package:intl/intl.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 
 @immutable
 class Message {
@@ -56,7 +57,41 @@ class MessagePanel extends StatefulWidget {
 
 class _MessagePanelState extends State<MessagePanel> {
   final TextEditingController controller = TextEditingController();
-  final List<String> emojiOptions = ['👍', '😂', '🔥', '❤️', '👀', '😢'];
+  final List<String> emojiOptions = [
+    '👍',
+    '😂',
+    '🔥',
+    '❤️',
+    '👀',
+    '😢',
+    '👏',
+    '🤔',
+    '💯',
+    '🙌',
+    '😎',
+    '🎉',
+    '🤯',
+    '🤷',
+    '💡',
+    '🥹',
+    '😤',
+    '😭',
+    '🙏',
+    '🍀',
+    '🤝',
+    '🌟',
+    '😅',
+    '💥',
+    '🫡',
+    '🧠',
+    '😈',
+    '🙈',
+    '📈',
+    '🫶',
+    '😮',
+    '👊',
+    '👑'
+  ];
 
   CollectionReference<Map<String, dynamic>>? get _messagesCollection {
     if (widget.memberId == null) return null;
@@ -131,6 +166,10 @@ class _MessagePanelState extends State<MessagePanel> {
         ),
       ),
     );
+  }
+
+  bool get _isIOS {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   @override
@@ -215,48 +254,8 @@ class _MessagePanelState extends State<MessagePanel> {
                                 ),
                               if (msg.timestamp != null)
                                 Padding(
-                                  padding: AppTheme.screenPadding,
-                                  child: Column(
-                                    children: [
-                                      Platform.isIOS
-                                          ? CupertinoTextField(
-                                              controller: controller,
-                                              placeholder: 'Leave a message...',
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 12,
-                                                      horizontal: 16),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyLarge,
-                                            )
-                                          : TextField(
-                                              controller: controller,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyLarge,
-                                              decoration: const InputDecoration(
-                                                labelText: 'Leave a message...',
-                                              ),
-                                            ),
-                                      const SizedBox(
-                                          height: AppTheme.spacingSmall),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () {
-                                            final msg = controller.text.trim();
-                                            if (msg.isNotEmpty) {
-                                              _sendMessage(msg);
-                                              controller.clear();
-                                            }
-                                          },
-                                          icon: const Icon(Icons.send),
-                                          label: const Text('Post Message'),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(formatTimestamp(msg.timestamp)),
                                 ),
                             ],
                           ),
@@ -283,13 +282,21 @@ class _MessagePanelState extends State<MessagePanel> {
             padding: AppTheme.screenPadding,
             child: Column(
               children: [
-                TextField(
-                  controller: controller,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  decoration: const InputDecoration(
-                    labelText: 'Leave a message...',
-                  ),
-                ),
+                _isIOS
+                    ? CupertinoTextField(
+                        controller: controller,
+                        placeholder: 'Leave a message...',
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      )
+                    : TextField(
+                        controller: controller,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        decoration: const InputDecoration(
+                          labelText: 'Leave a message...',
+                        ),
+                      ),
                 const SizedBox(height: AppTheme.spacingSmall),
                 SizedBox(
                   width: double.infinity,

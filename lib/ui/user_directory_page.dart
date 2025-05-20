@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/firestore_service.dart'; // <-- update path
+import '../services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'home_page.dart';
+import '../routes.dart';
 
 class UserDirectoryPage extends StatefulWidget {
   const UserDirectoryPage({super.key});
@@ -41,54 +44,65 @@ class _UserDirectoryPageState extends State<UserDirectoryPage> {
   void dispose() {
     searchController.dispose();
     super.dispose();
-  } 
- 
-  void _addUserDialog() {
-    final TextEditingController newUserController = TextEditingController();
+  }
+
+  void _showSearchOrAddNameDialog() {
+    final TextEditingController nameController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         content: TextField(
-          controller: newUserController,
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Enter a name',
+            border: OutlineInputBorder(),
+          ),
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Enter user name'),
+          onSubmitted: (_) => _submitName(nameController),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-            onPressed: () {
-              final newUser = newUserController.text.trim();
-              if (newUser.isEmpty) return;
-
-              if (users.any((u) => u.toLowerCase() == newUser.toLowerCase())) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('User "$newUser" already exists.')),
-                );
-                return;
-              }
-
-              setState(() {
-                users.add(newUser);
-                filteredUsers = List.from(users);
-                searchController.clear();
-              });
-
-              Navigator.pop(context);
-
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VoodooBoardHomePage(name: newUser),
-                ),
-              );
-            },
-            child: const Text('Add'),
+            onPressed: () => _submitName(nameController),
+            child: const Text('Go to Board'),
           ),
         ],
       ),
+    );
+  }
+
+  void _submitName(TextEditingController controller) async {
+    final name = controller.text.trim().toLowerCase(); // Force lowercase
+    if (name.isNotEmpty) {
+      try {
+        final membersCollection =
+            FirebaseFirestore.instance.collection('members');
+
+        final existingMember = await membersCollection.doc(name).get();
+        if (!existingMember.exists) {
+          await membersCollection.doc(name).set({});
+          print('Added $name to Firestore.');
+        } else {
+          print('$name already exists.');
+        }
+
+        Navigator.of(context).pop();
+        _navigateToBoard(context, name);
+      } catch (e) {
+        print('Error adding $name: $e');
+      }
+    }
+  }
+
+  void _navigateToBoard(BuildContext context, String name) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.nameBoard,
+      arguments: name,
     );
   }
 
@@ -110,7 +124,7 @@ class _UserDirectoryPageState extends State<UserDirectoryPage> {
           IconButton(
             icon: const Icon(Icons.person_add),
             tooltip: 'Add User',
-            onPressed: _addUserDialog,
+            onPressed: _showSearchOrAddNameDialog,
           ),
         ],
       ),
