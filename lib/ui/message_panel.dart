@@ -175,15 +175,16 @@ class _MessagePanelState extends State<MessagePanel> {
                                 padding: const EdgeInsets.only(top: 8.0),
                                 child: Wrap(
                                   spacing: 8,
-                                  children: msg.reactions.entries.map(
-                                    (entry) {
-                                      return Chip(
-                                        label: Text(
-                                          '${entry.key} ${entry.value}',
-                                        ),
-                                      );
-                                    },
-                                  ).toList(),
+                                  children: msg.reactions.entries.map((entry) {
+                                    return GestureDetector(
+                                      onTap: () =>
+                                          _addReaction(msg.id, entry.key),
+                                      child: Chip(
+                                        label:
+                                            Text('${entry.key} ${entry.value}'),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               )
                             : null,
@@ -191,12 +192,6 @@ class _MessagePanelState extends State<MessagePanel> {
                           direction: Axis.vertical,
                           spacing: 4,
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.redAccent),
-                              tooltip: 'Delete',
-                              onPressed: () => _deleteMessage(msg.id),
-                            ),
                             IconButton(
                               icon: const Icon(Icons.emoji_emotions,
                                   color: Colors.orange),

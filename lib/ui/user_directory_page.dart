@@ -49,7 +49,6 @@ class _UserDirectoryPageState extends State<UserDirectoryPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add New User'),
         content: TextField(
           controller: newUserController,
           autofocus: true,
