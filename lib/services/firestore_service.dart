@@ -1,7 +1,9 @@
+// lib/services/firestore_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
   Future<List<String>> getAllMemberNames() async {
     final snapshot = await _db.collection('members').get();
     return snapshot.docs.map((doc) => doc.id).toList();
@@ -25,83 +27,114 @@ class FirestoreService {
     print('One day ago with buffer (UTC): ${oneDayAgo.toDate().toUtc()}');
     print('One hour ago (UTC): ${oneHourAgo.toDate().toUtc()}');
 
-    final querySnapshot = await membersCollection.get();
-
-    final List<_NameStats> statsList = [];
-
-    for (final memberDoc in querySnapshot.docs) {
-      final memberName = memberDoc.id;
-      print('Checking member: $memberName');
-
-      final messagesCollection =
-          membersCollection.doc(memberName).collection('messages');
-
-      // Query messages from last day
-      final dailyMessagesSnapshot = await messagesCollection
-          .where('timestamp', isGreaterThanOrEqualTo: oneDayAgo)
-          .get();
-
+    try {
+      print('Fetching members collection...');
+      final querySnapshot = await membersCollection.get();
       print(
-          'Member $memberName daily messages count: ${dailyMessagesSnapshot.docs.length}');
+          'Members collection fetched, total docs: ${querySnapshot.docs.length}');
+      if (querySnapshot.docs.isEmpty) {
+        print('No members found in collection!');
+        return {'mostActive': [], 'gainingEnergy': []};
+      }
 
-      // Query messages from last hour
-      final hourlyMessagesSnapshot = await messagesCollection
-          .where('timestamp', isGreaterThanOrEqualTo: oneHourAgo)
-          .get();
+      final List<_NameStats> statsList = [];
 
-      print(
-          'Member $memberName hourly messages count: ${hourlyMessagesSnapshot.docs.length}');
+      for (final memberDoc in querySnapshot.docs) {
+        final memberName = memberDoc.id;
+        print('---');
+        print('Checking member: $memberName');
 
-      // Count daily interactions = messages + sum of all reactions counts on those messages
-      int dailyCount = 0;
-      for (final msgDoc in dailyMessagesSnapshot.docs) {
-        dailyCount++; // count the message itself
+        final messagesCollection =
+            membersCollection.doc(memberName).collection('messages');
 
-        // Print timestamp for debugging
-        final ts = msgDoc.get('timestamp') as Timestamp;
+        // Query messages from last day
+        final dailyMessagesSnapshot = await messagesCollection
+            .where('timestamp', isGreaterThanOrEqualTo: oneDayAgo)
+            .get();
+
         print(
-            'Daily msg timestamp: ${ts.toDate().toUtc()} for member $memberName');
+            'Member $memberName daily messages count: ${dailyMessagesSnapshot.docs.length}');
 
-        final reactions =
-            Map<String, dynamic>.from(msgDoc.get('reactions') ?? {});
-        dailyCount += reactions.values.fold<int>(
-          0,
-          (previousValue, element) =>
-              previousValue + (element is int ? element : 0),
-        );
+        if (dailyMessagesSnapshot.docs.isEmpty) {
+          print('Skipping $memberName due to no daily messages');
+          continue;
+        }
+
+        // Query messages from last hour
+        final hourlyMessagesSnapshot = await messagesCollection
+            .where('timestamp', isGreaterThanOrEqualTo: oneHourAgo)
+            .get();
+
+        print(
+            'Member $memberName hourly messages count: ${hourlyMessagesSnapshot.docs.length}');
+
+        int dailyCount = 0;
+        for (final msgDoc in dailyMessagesSnapshot.docs) {
+          dailyCount++; // count the message itself
+
+          final ts = msgDoc.get('timestamp');
+          if (ts is Timestamp) {
+            print(
+                'Daily msg timestamp: ${ts.toDate().toUtc()} for member $memberName');
+          } else {
+            print('Daily msg timestamp missing or invalid for $memberName');
+          }
+
+          final reactionsRaw = msgDoc.data()['reactions'];
+          final reactions = (reactionsRaw is Map)
+              ? Map<String, dynamic>.from(reactionsRaw)
+              : <String, dynamic>{};
+
+          final reactionsCount = reactions.values.fold<int>(
+            0,
+            (prev, elem) => prev + (elem is int ? elem : 0),
+          );
+
+          dailyCount += reactionsCount;
+        }
+
+        int hourlyCount = 0;
+        for (final msgDoc in hourlyMessagesSnapshot.docs) {
+          hourlyCount++; // message itself
+          final reactionsRaw = msgDoc.data()['reactions'];
+          final reactions = (reactionsRaw is Map)
+              ? Map<String, dynamic>.from(reactionsRaw)
+              : <String, dynamic>{};
+
+          final reactionsCount = reactions.values.fold<int>(
+            0,
+            (prev, elem) => prev + (elem is int ? elem : 0),
+          );
+          hourlyCount += reactionsCount;
+        }
+
+        print('Member $memberName daily interactions: $dailyCount');
+        print('Member $memberName hourly interactions: $hourlyCount');
+
+        statsList.add(_NameStats(
+            name: memberName, daily: dailyCount, hourly: hourlyCount));
       }
 
-      // Count hourly interactions similarly
-      int hourlyCount = 0;
-      for (final msgDoc in hourlyMessagesSnapshot.docs) {
-        hourlyCount++; // message itself
-        final reactions =
-            Map<String, dynamic>.from(msgDoc.get('reactions') ?? {});
-        hourlyCount += reactions.values.fold<int>(
-          0,
-          (prev, elem) => prev + (elem is int ? elem : 0),
-        );
-      }
+      // Sort descending by daily for most active
+      statsList.sort((a, b) => b.daily.compareTo(a.daily));
+      final mostActive = statsList.take(topN).map((e) => e.name).toList();
 
-      statsList.add(
-          _NameStats(name: memberName, daily: dailyCount, hourly: hourlyCount));
+      // Sort descending by hourly for gaining energy
+      statsList.sort((a, b) => b.hourly.compareTo(a.hourly));
+      final gainingEnergy = statsList.take(topN).map((e) => e.name).toList();
+
+      print('Most Active Names: $mostActive');
+      print('Gaining Energy Names: $gainingEnergy');
+
+      return {
+        'mostActive': mostActive,
+        'gainingEnergy': gainingEnergy,
+      };
+    } catch (e, stacktrace) {
+      print('Error during getTrendingNames: $e');
+      print(stacktrace);
+      return {'mostActive': [], 'gainingEnergy': []};
     }
-
-    // Sort descending by daily for most active
-    statsList.sort((a, b) => b.daily.compareTo(a.daily));
-    final mostActive = statsList.take(topN).map((e) => e.name).toList();
-
-    // Sort descending by hourly for gaining energy
-    statsList.sort((a, b) => b.hourly.compareTo(a.hourly));
-    final gainingEnergy = statsList.take(topN).map((e) => e.name).toList();
-
-    print('Most Active Names: $mostActive');
-    print('Gaining Energy Names: $gainingEnergy');
-
-    return {
-      'mostActive': mostActive,
-      'gainingEnergy': gainingEnergy,
-    };
   }
 }
 

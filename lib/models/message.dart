@@ -1,3 +1,4 @@
+//lib/models/message.dart
 class Message {
   final String content;
   final DateTime timestamp;
