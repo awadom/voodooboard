@@ -12,9 +12,12 @@ class Message {
 
   factory Message.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    final reactions = (data['reactions'] as Map<String, dynamic>?)?.map(
-      (key, value) => MapEntry(key, value as int),
-    );
+    final rawReactions = data['reactions'];
+    final reactions = (rawReactions is Map<String, dynamic>)
+        ? rawReactions
+            .map((key, value) => MapEntry(key, value is int ? value : 0))
+        : <String, int>{};
+
     return Message(doc.id, data['text'] as String, reactions);
   }
 
@@ -59,13 +62,6 @@ class _MessagePanelState extends State<MessagePanel> {
     });
   }
 
-  void _deleteMessage(String messageId) async {
-    final collection = _messagesCollection;
-    if (collection == null) return;
-
-    await collection.doc(messageId).delete();
-  }
-
   void _addReaction(String messageId, String emoji) async {
     final collection = _messagesCollection;
     if (collection == null) return;
@@ -80,7 +76,10 @@ class _MessagePanelState extends State<MessagePanel> {
       final reactions = Map<String, int>.from(data['reactions'] ?? {});
       reactions[emoji] = (reactions[emoji] ?? 0) + 1;
 
-      transaction.update(docRef, {'reactions': reactions});
+      transaction.update(docRef, {
+        'reactions': reactions,
+        'lastInteraction': FieldValue.serverTimestamp(), // 👈 Add this line
+      });
     });
   }
 

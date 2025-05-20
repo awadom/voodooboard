@@ -1,4 +1,3 @@
-// lib/services/firestore_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
@@ -16,7 +15,6 @@ class FirestoreService {
     final membersCollection = _db.collection('members');
     final now = DateTime.now().toUtc();
 
-    // Add a 10-minute buffer to the daily cutoff to avoid edge cases
     final oneDayAgo = Timestamp.fromDate(
       now.subtract(const Duration(days: 1, minutes: 10)),
     );
@@ -37,12 +35,14 @@ class FirestoreService {
         final messagesCollection =
             membersCollection.doc(memberName).collection('messages');
 
+        // Daily: messages posted in the last 24h
         final dailyMessagesSnapshot = await messagesCollection
             .where('timestamp', isGreaterThanOrEqualTo: oneDayAgo)
             .get();
 
+        // Hourly: messages with interaction in the last hour
         final hourlyMessagesSnapshot = await messagesCollection
-            .where('timestamp', isGreaterThanOrEqualTo: oneHourAgo)
+            .where('lastInteraction', isGreaterThanOrEqualTo: oneHourAgo)
             .get();
 
         int dailyCount = 0;
@@ -73,7 +73,6 @@ class FirestoreService {
           hourlyCount += reactionsCount;
         }
 
-        // Only include if there's at least one interaction in the last 24h
         if (dailyCount > 0 || hourlyCount > 0) {
           statsList.add(_NameStats(
             name: memberName,
@@ -83,12 +82,10 @@ class FirestoreService {
         }
       }
 
-      // Filter and sort by daily activity (≥ 1 interaction)
       final mostActive = statsList.where((e) => e.daily > 0).toList()
         ..sort((a, b) => b.daily.compareTo(a.daily));
       final mostActiveNames = mostActive.take(topN).map((e) => e.name).toList();
 
-      // Filter and sort by hourly activity (≥ 1 interaction)
       final gainingEnergy = statsList.where((e) => e.hourly > 0).toList()
         ..sort((a, b) => b.hourly.compareTo(a.hourly));
       final gainingEnergyNames =
