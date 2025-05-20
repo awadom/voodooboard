@@ -41,8 +41,8 @@ class _UserDirectoryPageState extends State<UserDirectoryPage> {
   void dispose() {
     searchController.dispose();
     super.dispose();
-  }
-
+  } 
+ 
   void _addUserDialog() {
     final TextEditingController newUserController = TextEditingController();
 
