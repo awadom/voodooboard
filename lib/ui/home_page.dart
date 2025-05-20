@@ -3,6 +3,7 @@ import 'message_panel.dart';
 import 'user_directory_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../routes.dart';
+import 'package:flutter/services.dart';
 
 class VoodooBoardHomePage extends StatefulWidget {
   final String name;
@@ -111,6 +112,64 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
     );
   }
 
+  void _showVoodooDialog() async {
+    const hexMessage =
+        'You have been summoned! 👁️\n\nClick the link below or paste this message somewhere for someone to discover your name:\n\n'
+        'https://voodooboard.netlify.app/';
+
+    await Clipboard.setData(ClipboardData(text: hexMessage));
+
+    final TextEditingController hexController =
+        TextEditingController(text: hexMessage);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Voodoo Summoning Ready!'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '🔮 The summoning message has been copied to your clipboard!\n\n'
+                'Go ahead and paste it somewhere — watch the magic happen as they come to their board page!\n\n'
+                'Message:',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: hexController,
+                maxLines: null,
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it!'),
+          ),
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: hexController.text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Hex message copied to clipboard!')),
+              );
+            },
+            child: const Text('Copy'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,23 +201,27 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                 heroTag: 'searchUserBtn',
               ),
             ),
-            // Diagonal up-left (example extra button)
-            // Positioned(
-            //   bottom: 35 + 72 + 10,
-            //   right: 72 + 10,
-            //   child: _buildMiniFab(
-            //     icon: Icons.settings,
-            //     tooltip: 'Settings',
-            //     onPressed: () {
-            //       ScaffoldMessenger.of(context).showSnackBar(
-            //         const SnackBar(content: Text('Settings clicked')),
-            //       );
-            //     },
-            //     heroTag: 'settingsBtn',
-            //   ),
-            // ),
-            // You can add more buttons in a grid pattern like this:
-            // (e.g., 2nd row left, 2nd row above, diagonal, etc.)
+            // Diagonal up-left for voodoo button
+            Positioned(
+              bottom: 35 + 72 + 10,
+              right: 72 + 10,
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: FloatingActionButton(
+                  heroTag: 'voodooBtn',
+                  onPressed: _showVoodooDialog,
+                  tooltip: 'Summon',
+                  backgroundColor: Theme.of(context)
+                      .floatingActionButtonTheme
+                      .backgroundColor,
+                  child: const Text(
+                    '🪄',
+                    style: TextStyle(fontSize: 28),
+                  ),
+                ),
+              ),
+            ),
           ],
           // Toggle FAB always present
           Positioned(
