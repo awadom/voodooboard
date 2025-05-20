@@ -1,24 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/theme.dart';
+import 'package:intl/intl.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
 
+@immutable
 class Message {
   final String id;
   final String text;
   final Map<String, int> reactions;
+  final DateTime? timestamp;
 
-  Message(this.id, this.text, [Map<String, int>? reactions])
-      : reactions = reactions ?? {};
+  const Message({
+    required this.id,
+    required this.text,
+    this.reactions = const {},
+    this.timestamp,
+  });
 
   factory Message.fromDoc(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
     final rawReactions = data['reactions'];
     final reactions = (rawReactions is Map<String, dynamic>)
         ? rawReactions
             .map((key, value) => MapEntry(key, value is int ? value : 0))
         : <String, int>{};
+    final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
-    return Message(doc.id, data['text'] as String, reactions);
+    return Message(
+      id: doc.id,
+      text: data['text'] as String? ?? '',
+      reactions: reactions,
+      timestamp: timestamp,
+    );
   }
 
   Map<String, dynamic> toMap() {
@@ -51,7 +66,13 @@ class _MessagePanelState extends State<MessagePanel> {
         .collection('messages');
   }
 
-  void _sendMessage(String text) async {
+  String formatTimestamp(DateTime? timestamp) {
+    if (timestamp == null) return '';
+    final formatter = DateFormat('EEE, MMM d \'at\' h:mm a');
+    return formatter.format(timestamp);
+  }
+
+  Future<void> _sendMessage(String text) async {
     final collection = _messagesCollection;
     if (collection == null) return;
 
@@ -62,7 +83,7 @@ class _MessagePanelState extends State<MessagePanel> {
     });
   }
 
-  void _addReaction(String messageId, String emoji) async {
+  Future<void> _addReaction(String messageId, String emoji) async {
     final collection = _messagesCollection;
     if (collection == null) return;
 
@@ -78,7 +99,7 @@ class _MessagePanelState extends State<MessagePanel> {
 
       transaction.update(docRef, {
         'reactions': reactions,
-        'lastInteraction': FieldValue.serverTimestamp(), // 👈 Add this line
+        'lastInteraction': FieldValue.serverTimestamp(),
       });
     });
   }
@@ -155,53 +176,100 @@ class _MessagePanelState extends State<MessagePanel> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: AppTheme.spacingSmall),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacingMedium,
-                          vertical: AppTheme.spacingSmall,
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Card(
+                        key: ValueKey(msg.id),
+                        margin: const EdgeInsets.symmetric(
+                            vertical: AppTheme.spacingSmall),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        title: Text(msg.text),
-                        subtitle: msg.reactions.isNotEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Wrap(
-                                  spacing: 8,
-                                  children: msg.reactions.entries.map((entry) {
-                                    return GestureDetector(
-                                      onTap: () =>
-                                          _addReaction(msg.id, entry.key),
-                                      child: Chip(
-                                        label:
-                                            Text('${entry.key} ${entry.value}'),
-                                      ),
-                                    );
-                                  }).toList(),
+                        elevation: 2,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacingMedium,
+                            vertical: AppTheme.spacingSmall,
+                          ),
+                          title: Text(msg.text),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (msg.reactions.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    children:
+                                        msg.reactions.entries.map((entry) {
+                                      return GestureDetector(
+                                        onTap: () =>
+                                            _addReaction(msg.id, entry.key),
+                                        child: Chip(
+                                          label: Text(
+                                              '${entry.key} ${entry.value}'),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
                                 ),
-                              )
-                            : null,
-                        trailing: Wrap(
-                          direction: Axis.vertical,
-                          spacing: 4,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.emoji_emotions,
-                                  color: Colors.orange),
-                              tooltip: 'React',
-                              onPressed: () {
-                                Future.delayed(Duration.zero, () {
-                                  _showEmojiPicker(context, msg.id);
-                                });
-                              },
-                            ),
-                          ],
+                              if (msg.timestamp != null)
+                                Padding(
+                                  padding: AppTheme.screenPadding,
+                                  child: Column(
+                                    children: [
+                                      Platform.isIOS
+                                          ? CupertinoTextField(
+                                              controller: controller,
+                                              placeholder: 'Leave a message...',
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                      horizontal: 16),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge,
+                                            )
+                                          : TextField(
+                                              controller: controller,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge,
+                                              decoration: const InputDecoration(
+                                                labelText: 'Leave a message...',
+                                              ),
+                                            ),
+                                      const SizedBox(
+                                          height: AppTheme.spacingSmall),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            final msg = controller.text.trim();
+                                            if (msg.isNotEmpty) {
+                                              _sendMessage(msg);
+                                              controller.clear();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.send),
+                                          label: const Text('Post Message'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.emoji_emotions,
+                                color: Colors.orange),
+                            tooltip: 'React',
+                            onPressed: () {
+                              Future.delayed(Duration.zero, () {
+                                _showEmojiPicker(context, msg.id);
+                              });
+                            },
+                          ),
                         ),
                       ),
                     );
@@ -217,9 +285,7 @@ class _MessagePanelState extends State<MessagePanel> {
               children: [
                 TextField(
                   controller: controller,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge, // Adapts text color to theme
+                  style: Theme.of(context).textTheme.bodyLarge,
                   decoration: const InputDecoration(
                     labelText: 'Leave a message...',
                   ),
