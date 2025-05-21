@@ -1,11 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
-
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -17,49 +15,13 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isRegistering = false;
   bool _loading = false;
-  bool _redirectLoading = false; // Loading while waiting for redirect result
   String? _error;
-  User? _user;
 
-  @override
-  void initState() {
-    super.initState();
-    _user = AuthService.currentUser;
-    if (kIsWeb) {
-      _handleRedirectResult();
-    }
-  }
-
-  Future<void> _handleRedirectResult() async {
-    setState(() {
-      _redirectLoading = true;
-      _error = null;
-    });
-
-    try {
-      final user = await AuthService.getRedirectResult();
-      if (user != null) {
-        setState(() {
-          _user = user;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Error retrieving redirect result: $e';
-      });
-    } finally {
-      setState(() {
-        _redirectLoading = false;
-      });
-    }
-  }
-
-  Future<void> _handleEmailAuth(BuildContext context) async {
+  Future<void> _handleEmailAuth() async {
     setState(() {
       _loading = true;
       _error = null;
     });
-
     try {
       if (_isRegistering) {
         await _auth.createUserWithEmailAndPassword(
@@ -72,9 +34,6 @@ class _LoginPageState extends State<LoginPage> {
           password: _passwordController.text,
         );
       }
-      setState(() {
-        _user = _auth.currentUser;
-      });
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
@@ -83,45 +42,30 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _signInWithGoogle(BuildContext context) async {
+  Future<void> _signInWithGoogle() async {
     setState(() {
       _loading = true;
       _error = null;
     });
-
     try {
-      // signInWithGoogle on web triggers redirect, so user will be null immediately
       final user = await AuthService.signInWithGoogle();
       if (user != null) {
-        setState(() {
-          _user = user;
-        });
         Navigator.pop(context);
+      } else {
+        setState(() => _error = "Google Sign-In canceled");
       }
-      // else: redirect will reload page and _handleRedirectResult will update state
-    } catch (e) {
-      setState(() => _error = e.toString());
+    } on FirebaseAuthException catch (e) {
+      setState(() => _error = e.message);
+    } finally {
       setState(() => _loading = false);
     }
   }
 
-  Future<void> _signOut() async {
-    setState(() => _loading = true);
-    await AuthService.signOut();
-    setState(() {
-      _loading = false;
-      _user = null;
-    });
-  }
+  Future<void> _signOut() => AuthService.signOut();
 
   @override
   Widget build(BuildContext context) {
-    if (_redirectLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
+    final user = AuthService.currentUser;
     return Scaffold(
       appBar: AppBar(title: const Text("Login")),
       body: Padding(
@@ -129,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_user == null) ...[
+            if (user == null) ...[
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: "Email"),
@@ -146,9 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Checkbox(
                     value: _isRegistering,
-                    onChanged: (val) {
-                      setState(() => _isRegistering = val ?? false);
-                    },
+                    onChanged: (val) => setState(() => _isRegistering = val!),
                   ),
                   const Text("Register new account"),
                 ],
@@ -159,19 +101,21 @@ class _LoginPageState extends State<LoginPage> {
               Text(_error!, style: const TextStyle(color: Colors.red)),
             if (_loading)
               const Center(child: CircularProgressIndicator())
-            else if (_user == null) ...[
+            else if (user == null) ...[
               ElevatedButton(
-                onPressed: () => _handleEmailAuth(context),
-                child: Text(_isRegistering ? "Register" : "Sign in with Email"),
+                onPressed: _handleEmailAuth,
+                child: Text(
+                  _isRegistering ? "Register" : "Sign in with Email",
+                ),
               ),
               const SizedBox(height: 12),
               ElevatedButton.icon(
-                onPressed: () => _signInWithGoogle(context),
+                onPressed: _signInWithGoogle,
                 icon: const Icon(Icons.login),
                 label: const Text("Sign in with Google"),
               ),
             ] else ...[
-              Text("Signed in as: ${_user!.email ?? _user!.displayName}"),
+              Text("Signed in as: ${user.email ?? user.displayName}"),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _signOut,
