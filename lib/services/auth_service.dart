@@ -3,39 +3,69 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
-  static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb
-        ? '547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com'
-        : null,
-    scopes: ['email'],
-  );
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  static User? get currentUser => _auth.currentUser;
 
   static Future<User?> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null;
+    if (kIsWeb) {
+      final googleProvider = GoogleAuthProvider();
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+      try {
+        // Try popup (desktop web)
+        final result = await _auth.signInWithPopup(googleProvider);
+        return result.user;
+      } catch (e) {
+        // Fallback to redirect (mobile web)
+        await _auth.signInWithRedirect(googleProvider);
+        return null; // Wait for redirect result on reload
+      }
+    } else {
+      // Native mobile (Android/iOS)
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: kIsWeb
+            ? '547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com'
+            : null,
+        scopes: ['email'],
+      );
 
-    final userCredential =
-        await FirebaseAuth.instance.signInWithCredential(credential);
-    return userCredential.user;
-  }
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-  static Future<void> signOut() async {
-    // Sign out from Firebase
-    await FirebaseAuth.instance.signOut();
+      final googleAuth = await googleUser.authentication;
 
-    // Also sign out from Google
-    try {
-      await _googleSignIn.signOut();
-    } catch (e) {
-      print('Error signing out from Google: $e');
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      return userCredential.user;
     }
   }
 
-  static User? get currentUser => FirebaseAuth.instance.currentUser;
+  /// Call this in `main()` after `Firebase.initializeApp()` for web redirect
+  static Future<void> handleRedirectResult() async {
+    if (kIsWeb) {
+      try {
+        final result = await _auth.getRedirectResult();
+        if (result.user != null) {
+          print("Redirect sign-in success: ${result.user!.email}");
+        }
+      } catch (e) {
+        print("Redirect result error: $e");
+      }
+    }
+  }
+
+  static Future<void> signOut() async {
+    await _auth.signOut();
+    if (!kIsWeb) {
+      try {
+        await GoogleSignIn().signOut();
+      } catch (e) {
+        print('Error signing out from Google: $e');
+      }
+    }
+  }
 }
