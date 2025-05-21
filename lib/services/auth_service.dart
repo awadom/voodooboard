@@ -1,7 +1,11 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+// Conditionally import platform_utils to detect mobile web properly
+import '../utils/platform_utils_stub.dart'
+    if (dart.library.js_interop) '../utils/platform_utils_web.dart';
 
+//
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -12,20 +16,25 @@ class AuthService {
       final googleProvider = GoogleAuthProvider();
 
       try {
-        // Try popup (desktop web)
-        final result = await _auth.signInWithPopup(googleProvider);
-        return result.user;
+        // On desktop web or non-mobile web, try popup
+        if (!isMobileBrowser()) {
+          final result = await _auth.signInWithPopup(googleProvider);
+          return result.user;
+        } else {
+          // On mobile web, fallback to redirect sign in
+          await _auth.signInWithRedirect(googleProvider);
+          return null; // Redirect will reload and handle auth later
+        }
       } catch (e) {
-        // Fallback to redirect (mobile web)
+        // If popup fails for any reason, fallback to redirect
         await _auth.signInWithRedirect(googleProvider);
-        return null; // Wait for redirect result on reload
+        return null;
       }
     } else {
-      // Native mobile (Android/iOS)
+      // Native mobile platforms: Android and iOS
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb
-            ? '547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com'
-            : null,
+        clientId:
+            '547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com', // Set your iOS and Android client IDs here if needed
         scopes: ['email'],
       );
 
@@ -44,7 +53,7 @@ class AuthService {
     }
   }
 
-  /// Call this in `main()` after `Firebase.initializeApp()` for web redirect
+  /// Call this in `main()` after `Firebase.initializeApp()` to handle web redirect
   static Future<void> handleRedirectResult() async {
     if (kIsWeb) {
       try {
