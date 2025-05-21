@@ -57,6 +57,7 @@ class MessagePanel extends StatefulWidget {
 
 class _MessagePanelState extends State<MessagePanel> {
   final TextEditingController controller = TextEditingController();
+
   final List<String> emojiOptions = [
     '👍',
     '😂',
@@ -168,9 +169,7 @@ class _MessagePanelState extends State<MessagePanel> {
     );
   }
 
-  bool get _isIOS {
-    return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-  }
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void dispose() {

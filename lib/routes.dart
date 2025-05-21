@@ -1,17 +1,16 @@
-// lib/routes.dart
-
 import 'package:flutter/material.dart';
 import 'ui/trending_board.dart';
 import 'ui/home_page.dart';
+import 'services/login.dart'; // <-- Add this line
 
 class AppRoutes {
   static const String home = '/';
   static const String nameBoard = '/nameBoard';
+  static const String login = '/login'; // <-- Add this line
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case home:
-        // No arguments needed now, TrendingBoardsPage fetches data internally
         return MaterialPageRoute(
           builder: (_) => const TrendingBoardsPage(),
         );
@@ -19,6 +18,10 @@ class AppRoutes {
         final name = settings.arguments as String;
         return MaterialPageRoute(
           builder: (_) => VoodooBoardHomePage(name: name),
+        );
+      case login:
+        return MaterialPageRoute(
+          builder: (_) => const LoginPage(), // <-- Navigate to LoginPage
         );
       default:
         return MaterialPageRoute(

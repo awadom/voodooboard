@@ -1,10 +1,12 @@
-// lib/ui/trending_board.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../routes.dart';
 import '../services/firestore_service.dart';
 import '../app.dart'; // to access routeObserver
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/login.dart'; // if LoginPage is declared here
+
+bool showFabMenu = false;
 
 class TrendingBoardsPage extends StatefulWidget {
   const TrendingBoardsPage({super.key});
@@ -44,8 +46,7 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
 
   @override
   void didPopNext() {
-    // Called when the page is visible again
-    _fetchTrendingNames();
+    _fetchTrendingNames(); // Refresh when coming back
   }
 
   void _navigateToBoard(BuildContext context, String name) {
@@ -86,7 +87,7 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
   }
 
   void _submitName(TextEditingController controller) async {
-    final name = controller.text.trim().toLowerCase(); // Force lowercase
+    final name = controller.text.trim().toLowerCase();
     if (name.isNotEmpty) {
       try {
         final membersCollection =
@@ -108,8 +109,40 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
     }
   }
 
+  Future<void> _handleLogin() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser != null) {
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out')),
+      );
+      setState(() {});
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
+      if (!mounted) return;
+      final newUser = FirebaseAuth.instance.currentUser;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newUser != null
+                ? 'Welcome, ${newUser.displayName ?? newUser.email}!'
+                : 'Login cancelled',
+          ),
+        ),
+      );
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    //final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trending Name Boards'),
@@ -182,22 +215,76 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
           },
         ),
       ),
-      floatingActionButton: SizedBox(
-        width: 100,
-        height: 100,
-        child: FloatingActionButton(
-          onPressed: _showSearchOrAddNameDialog,
-          backgroundColor: const Color.fromARGB(255, 252, 235, 254),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), // Square with soft corners
+      floatingActionButton: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          // 🔮 Always visible fab_name (leftmost)
+          Positioned(
+            bottom: 35,
+            right: 72 * 1 + 10, // two FAB widths + spacing
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: FloatingActionButton(
+                heroTag: 'fab_name',
+                onPressed: _showSearchOrAddNameDialog,
+                backgroundColor: const Color.fromARGB(255, 252, 235, 254),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text(
+                  '🔮',
+                  style: TextStyle(fontSize: 28),
+                ),
+              ),
+            ),
           ),
-          child: const Text(
-            '🔮',
-            style: TextStyle(fontSize: 40),
+
+          if (showFabMenu) ...[
+            // Login/Logout button (middle)
+            Positioned(
+              bottom: 35 + 72 + 10,
+              right: 0, // one FAB width + spacing
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: FloatingActionButton(
+                  heroTag: 'fab_login',
+                  onPressed: _handleLogin,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    FirebaseAuth.instance.currentUser == null
+                        ? Icons.login
+                        : Icons.logout,
+                    color: Colors.deepPurple,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // Toggle button (rightmost)
+          Positioned(
+            bottom: 35,
+            right: 0,
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: FloatingActionButton(
+                heroTag: 'fab_toggle',
+                onPressed: () => setState(() => showFabMenu = !showFabMenu),
+                backgroundColor: Colors.deepPurple,
+                child: Icon(
+                  showFabMenu ? Icons.close : Icons.menu,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
