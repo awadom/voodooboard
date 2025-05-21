@@ -1,3 +1,4 @@
+// lib/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html; // for userAgent sniffing on web
@@ -8,6 +9,17 @@ class AuthService {
 
   static User? get currentUser => _auth.currentUser;
 
+  /// Links a silently signed-in Google account to Firebase Auth
+  static Future linkSilentAccount(GoogleSignInAccount account) async {
+    final googleAuth = await account.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    await _auth.signInWithCredential(credential);
+  }
+
+  /// Google Sign-In with proper handling for web (popup/redirect) and iOS Safari
   static Future<User?> signInWithGoogle() async {
     if (kIsWeb) {
       final provider = GoogleAuthProvider();
@@ -55,7 +67,8 @@ class AuthService {
     }
   }
 
-  static Future<void> signOut() async {
+  /// Sign out from Firebase and Google (if on mobile)
+  static Future signOut() async {
     if (!kIsWeb) {
       await GoogleSignIn().signOut();
     }

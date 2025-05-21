@@ -12,7 +12,12 @@
           "package_name": "com.example.voodooboard"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAkZr-ejyczOW8XfDcXfg8NKwW7x8oRQYU"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "547078088322-ggsjf0hkec0sl0oa1j9qa733trsk6q7t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.voodooboard"
+              }
+            }
+          ]
         }
       }
     }

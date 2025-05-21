@@ -64,6 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '547078088322',
     projectId: 'voodoo-board',
     storageBucket: 'voodoo-board.firebasestorage.app',
+    iosClientId: '547078088322-ggsjf0hkec0sl0oa1j9qa733trsk6q7t.apps.googleusercontent.com',
     iosBundleId: 'com.example.voodooboard',
   );
 
@@ -73,6 +74,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '547078088322',
     projectId: 'voodoo-board',
     storageBucket: 'voodoo-board.firebasestorage.app',
+    iosClientId: '547078088322-ggsjf0hkec0sl0oa1j9qa733trsk6q7t.apps.googleusercontent.com',
     iosBundleId: 'com.example.voodooboard',
   );
 
@@ -85,4 +87,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'voodoo-board.firebasestorage.app',
     measurementId: 'G-JCLNKYZVC2',
   );
+
 }

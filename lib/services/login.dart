@@ -1,14 +1,15 @@
+// lib/login.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({Key? key}) : super(key: key);
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _auth = FirebaseAuth.instance;
@@ -17,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
   String? _error;
 
-  Future<void> _handleEmailAuth() async {
+  Future _handleEmailAuth() async {
     setState(() {
       _loading = true;
       _error = null;
@@ -42,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _signInWithGoogle() async {
+  Future _signInWithGoogle() async {
     setState(() {
       _loading = true;
       _error = null;
@@ -61,7 +62,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _signOut() => AuthService.signOut();
+  Future _signOut() => AuthService.signOut();
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +91,8 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Checkbox(
                     value: _isRegistering,
-                    onChanged: (val) => setState(() => _isRegistering = val!),
+                    onChanged: (val) =>
+                        setState(() => _isRegistering = val ?? false),
                   ),
                   const Text("Register new account"),
                 ],
