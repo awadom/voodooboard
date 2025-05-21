@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html; // for userAgent sniffing on web
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -9,23 +10,38 @@ class AuthService {
 
   static Future<User?> signInWithGoogle() async {
     if (kIsWeb) {
-      // Web: use Firebase JS pop-up
-      final googleProvider = GoogleAuthProvider();
-      try {
-        final UserCredential userCredential =
-            await _auth.signInWithPopup(googleProvider);
-        return userCredential.user;
-      } on FirebaseAuthException catch (e) {
-        // If pop-up is blocked, you can fallback to redirect:
-        if (e.code == 'popup-blocked') {
-          await _auth.signInWithRedirect(googleProvider);
-          final result = await _auth.getRedirectResult();
-          return result.user;
+      final provider = GoogleAuthProvider();
+
+      // Detect iOS Safari (blocks pop-ups)
+      final ua = html.window.navigator.userAgent.toLowerCase();
+      final isIosSafari = ua.contains('safari') &&
+          (ua.contains('iphone') || ua.contains('ipad')) &&
+          !ua.contains('crios') &&
+          !ua.contains('fxios');
+
+      if (isIosSafari) {
+        // Force redirect flow on iOS Safari
+        await _auth.signInWithRedirect(provider);
+        final result = await _auth.getRedirectResult();
+        return result.user;
+      } else {
+        // Try popup first
+        try {
+          final cred = await _auth.signInWithPopup(provider);
+          return cred.user;
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'auth/popup-blocked' ||
+              e.code == 'auth/popup-closed-by-user') {
+            // Fallback to redirect
+            await _auth.signInWithRedirect(provider);
+            final result = await _auth.getRedirectResult();
+            return result.user;
+          }
+          rethrow;
         }
-        rethrow;
       }
     } else {
-      // Mobile: use native GoogleSignIn
+      // Native mobile flow
       final googleSignIn = GoogleSignIn();
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) return null;
@@ -34,8 +50,8 @@ class AuthService {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      final userCredential = await _auth.signInWithCredential(credential);
-      return userCredential.user;
+      final userCred = await _auth.signInWithCredential(credential);
+      return userCred.user;
     }
   }
 
