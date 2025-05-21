@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // For auth check
+import 'package:flutter/services.dart';
+
 import 'message_panel.dart';
 import 'user_directory_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/login.dart'; // Adjust import as per your project
+import 'profile_page.dart'; // Adjust import as per your project
 import '../routes.dart';
-import 'package:flutter/services.dart';
 
 class VoodooBoardHomePage extends StatefulWidget {
   final String name;
@@ -170,8 +174,18 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
     );
   }
 
+  void _signOut() async {
+    await FirebaseAuth.instance.signOut();
+    setState(() {}); // Update UI after sign out
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Signed out successfully')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(title: Text('🔮 $selectedMember'), centerTitle: true),
       body: MessagePanel(memberId: selectedMember),
@@ -179,7 +193,6 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
         alignment: Alignment.bottomRight,
         children: [
           if (showFabMenu) ...[
-            // Top of toggle
             Positioned(
               bottom: 35 + 72 + 10,
               right: 0,
@@ -190,7 +203,6 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                 heroTag: 'addUserBtn',
               ),
             ),
-            // Left of toggle
             Positioned(
               bottom: 35,
               right: 72 + 10,
@@ -201,7 +213,6 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                 heroTag: 'searchUserBtn',
               ),
             ),
-            // Diagonal up-left for voodoo button
             Positioned(
               bottom: 35 + 72 + 10,
               right: 72 + 10,
@@ -222,7 +233,45 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
                 ),
               ),
             ),
+
+            // Login/Profile button
+            Positioned(
+              bottom: 35 + 72 + 10,
+              right: 2 * (72 + 10),
+              child: _buildMiniFab(
+                icon: user == null ? Icons.login : Icons.person,
+                tooltip: user == null ? 'Login' : 'Profile',
+                onPressed: () {
+                  if (user == null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                    ).then((_) => setState(() {}));
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilePage()),
+                    ).then((_) => setState(() {}));
+                  }
+                },
+                heroTag: 'loginOrProfileBtn',
+              ),
+            ),
+
+            // Logout button only if logged in
+            if (user != null)
+              Positioned(
+                bottom: 35,
+                right: 2 * (72 + 10),
+                child: _buildMiniFab(
+                  icon: Icons.logout,
+                  tooltip: 'Logout',
+                  onPressed: _signOut,
+                  heroTag: 'logoutBtn',
+                ),
+              ),
           ],
+
           // Toggle FAB always present
           Positioned(
             bottom: 35,
