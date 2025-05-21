@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
@@ -16,7 +17,42 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isRegistering = false;
   bool _loading = false;
+  bool _redirectLoading = false; // Loading while waiting for redirect result
   String? _error;
+  User? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = AuthService.currentUser;
+    if (kIsWeb) {
+      _handleRedirectResult();
+    }
+  }
+
+  Future<void> _handleRedirectResult() async {
+    setState(() {
+      _redirectLoading = true;
+      _error = null;
+    });
+
+    try {
+      final user = await AuthService.getRedirectResult();
+      if (user != null) {
+        setState(() {
+          _user = user;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Error retrieving redirect result: $e';
+      });
+    } finally {
+      setState(() {
+        _redirectLoading = false;
+      });
+    }
+  }
 
   Future<void> _handleEmailAuth(BuildContext context) async {
     setState(() {
@@ -36,7 +72,10 @@ class _LoginPageState extends State<LoginPage> {
           password: _passwordController.text,
         );
       }
-      Navigator.pop(context); // <-- Just close login page instead of redirect
+      setState(() {
+        _user = _auth.currentUser;
+      });
+      Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -51,15 +90,17 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      // signInWithGoogle on web triggers redirect, so user will be null immediately
       final user = await AuthService.signInWithGoogle();
       if (user != null) {
-        Navigator.pop(context); // <-- Close login page on success
-      } else {
-        setState(() => _error = "Google Sign-In canceled");
+        setState(() {
+          _user = user;
+        });
+        Navigator.pop(context);
       }
-    } on FirebaseAuthException catch (e) {
-      setState(() => _error = e.message);
-    } finally {
+      // else: redirect will reload page and _handleRedirectResult will update state
+    } catch (e) {
+      setState(() => _error = e.toString());
       setState(() => _loading = false);
     }
   }
@@ -67,12 +108,19 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _signOut() async {
     setState(() => _loading = true);
     await AuthService.signOut();
-    setState(() => _loading = false);
+    setState(() {
+      _loading = false;
+      _user = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthService.currentUser;
+    if (_redirectLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Login")),
@@ -81,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (user == null) ...[
+            if (_user == null) ...[
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: "Email"),
@@ -111,7 +159,7 @@ class _LoginPageState extends State<LoginPage> {
               Text(_error!, style: const TextStyle(color: Colors.red)),
             if (_loading)
               const Center(child: CircularProgressIndicator())
-            else if (user == null) ...[
+            else if (_user == null) ...[
               ElevatedButton(
                 onPressed: () => _handleEmailAuth(context),
                 child: Text(_isRegistering ? "Register" : "Sign in with Email"),
@@ -123,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                 label: const Text("Sign in with Google"),
               ),
             ] else ...[
-              Text("Signed in as: ${user.email ?? user.displayName}"),
+              Text("Signed in as: ${_user!.email ?? _user!.displayName}"),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _signOut,

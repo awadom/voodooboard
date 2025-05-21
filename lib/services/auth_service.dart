@@ -1,11 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-// Conditionally import platform_utils to detect mobile web properly
-import '../utils/platform_utils_stub.dart'
-    if (dart.library.js_interop) '../utils/platform_utils_web.dart';
 
-//
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -13,28 +9,14 @@ class AuthService {
 
   static Future<User?> signInWithGoogle() async {
     if (kIsWeb) {
+      // Always do redirect on web for consistency
       final googleProvider = GoogleAuthProvider();
 
-      try {
-        // On desktop web or non-mobile web, try popup
-        if (!isMobileBrowser()) {
-          final result = await _auth.signInWithPopup(googleProvider);
-          return result.user;
-        } else {
-          // On mobile web, fallback to redirect sign in
-          await _auth.signInWithRedirect(googleProvider);
-          return null; // Redirect will reload and handle auth later
-        }
-      } catch (e) {
-        // If popup fails for any reason, fallback to redirect
-        await _auth.signInWithRedirect(googleProvider);
-        return null;
-      }
+      await _auth.signInWithRedirect(googleProvider);
+      return null; // User will return on app reload after redirect
     } else {
-      // Native mobile platforms: Android and iOS
+      // Native platforms (Android/iOS)
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId:
-            '547078088322-9mgcp3b5kdtcedbtg130c56vlocatsjg.apps.googleusercontent.com', // Set your iOS and Android client IDs here if needed
         scopes: ['email'],
       );
 
@@ -53,18 +35,17 @@ class AuthService {
     }
   }
 
-  /// Call this in `main()` after `Firebase.initializeApp()` to handle web redirect
-  static Future<void> handleRedirectResult() async {
+  static Future<User?> getRedirectResult() async {
     if (kIsWeb) {
       try {
         final result = await _auth.getRedirectResult();
-        if (result.user != null) {
-          print("Redirect sign-in success: ${result.user!.email}");
-        }
+        return result.user;
       } catch (e) {
         print("Redirect result error: $e");
+        return null;
       }
     }
+    return null;
   }
 
   static Future<void> signOut() async {
