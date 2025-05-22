@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'ui/trending_board.dart';
 import 'ui/home_page.dart';
-import 'services/login.dart'; // <-- Add this line
+import 'ui/login.dart'; // <-- Add this line
 
 class AppRoutes {
   static const String home = '/';

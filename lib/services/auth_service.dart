@@ -23,8 +23,6 @@ class AuthService {
   static Future<User?> signInWithGoogle() async {
     if (kIsWeb) {
       final provider = GoogleAuthProvider();
-
-      // Detect iOS Safari (blocks pop-ups)
       final ua = html.window.navigator.userAgent.toLowerCase();
       final isIosSafari = ua.contains('safari') &&
           (ua.contains('iphone') || ua.contains('ipad')) &&
@@ -32,28 +30,25 @@ class AuthService {
           !ua.contains('fxios');
 
       if (isIosSafari) {
-        // Force redirect flow on iOS Safari
+        // Trigger the redirect flow.
         await _auth.signInWithRedirect(provider);
-        final result = await _auth.getRedirectResult();
-        return result.user;
+        // After redirect, do not try to get the result immediately.
+        return null;
       } else {
-        // Try popup first
         try {
           final cred = await _auth.signInWithPopup(provider);
           return cred.user;
         } on FirebaseAuthException catch (e) {
           if (e.code == 'auth/popup-blocked' ||
               e.code == 'auth/popup-closed-by-user') {
-            // Fallback to redirect
             await _auth.signInWithRedirect(provider);
-            final result = await _auth.getRedirectResult();
-            return result.user;
+            return null;
           }
           rethrow;
         }
       }
     } else {
-      // Native mobile flow
+      // Mobile native flow.
       final googleSignIn = GoogleSignIn();
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) return null;

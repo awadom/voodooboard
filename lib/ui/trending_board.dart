@@ -4,7 +4,7 @@ import '../routes.dart';
 import '../services/firestore_service.dart';
 import '../app.dart'; // to access routeObserver
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/login.dart'; // if LoginPage is declared here
+import 'login.dart'; // if LoginPage is declared here
 
 bool showFabMenu = false;
 

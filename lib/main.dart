@@ -13,14 +13,17 @@ Future main() async {
   );
 
   if (kIsWeb) {
-// Handle any pending OAuth redirect result before UI loads
+    // Handle any pending OAuth redirect result before UI loads
     try {
       final result = await FirebaseAuth.instance.getRedirectResult();
       if (result.user != null) {
-// User signed in via redirect; you can handle post-login logic here
+        // Optionally, handle the signed-in user info.
+        // For example, update some state or log the user in silently.
+        print("User signed in: ${result.user?.displayName}");
       }
     } catch (_) {
-// No redirect result or error
+      // No redirect result or error occurred
+      print("No redirect result or error.");
     }
   }
 
