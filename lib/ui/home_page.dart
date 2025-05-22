@@ -73,6 +73,8 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
           print('$name already exists.');
         }
 
+        if (!mounted) return; // <-- check mounted before setState or navigation
+
         Navigator.of(context).pop();
         _navigateToBoard(context, name);
       } catch (e) {
@@ -164,7 +166,8 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
               Clipboard.setData(ClipboardData(text: hexController.text));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                    content: Text('Hex message copied to clipboard!')),
+                    content: Text(
+                        'Summoning copied to clipboard send it to someone!')),
               );
             },
             child: const Text('Copy'),
@@ -176,6 +179,7 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
 
   void _signOut() async {
     await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
     setState(() {}); // Update UI after sign out
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Signed out successfully')),
@@ -214,44 +218,40 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
               ),
             ),
             Positioned(
-              bottom: 35 + 72 + 10,
+              bottom: 35,
               right: 72 + 10,
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: FloatingActionButton(
-                  heroTag: 'voodooBtn',
-                  onPressed: _showVoodooDialog,
-                  tooltip: 'Summon',
-                  backgroundColor: Theme.of(context)
-                      .floatingActionButtonTheme
-                      .backgroundColor,
-                  child: const Text(
-                    '🪄',
-                    style: TextStyle(fontSize: 28),
-                  ),
-                ),
+              child: _buildMiniFab(
+                icon: Icons.send,
+                tooltip: 'Summon',
+                onPressed: _showVoodooDialog,
+                heroTag: 'shareBtn',
               ),
             ),
 
             // Login/Profile button
             Positioned(
               bottom: 35 + 72 + 10,
-              right: 2 * (72 + 10),
+              right: 1 * (72 + 10),
               child: _buildMiniFab(
-                icon: user == null ? Icons.login : Icons.person,
+                icon: user == null ? Icons.account_circle : Icons.person,
                 tooltip: user == null ? 'Login' : 'Profile',
                 onPressed: () {
                   if (user == null) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const LoginPage()),
-                    ).then((_) => setState(() {}));
+                    ).then((_) {
+                      if (!mounted) return;
+                      setState(() {});
+                    });
                   } else {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ProfilePage()),
-                    ).then((_) => setState(() {}));
+                    ).then((_) {
+                      if (!mounted) return;
+                      setState(() {});
+                    });
                   }
                 },
                 heroTag: 'loginOrProfileBtn',
@@ -262,7 +262,7 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
             if (user != null)
               Positioned(
                 bottom: 35,
-                right: 2 * (72 + 10),
+                right: 1 * (72 + 10),
                 child: _buildMiniFab(
                   icon: Icons.logout,
                   tooltip: 'Logout',
