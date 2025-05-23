@@ -28,7 +28,19 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    // Handle redirect results (only relevant on web)
+
+    // Complete redirect-based sign-in on mobile web
+    FirebaseAuth.instance.getRedirectResult().then((result) {
+      if (result.user != null) {
+        widget.onLoginSuccess?.call();
+      }
+    }).catchError((error) {
+      setState(() {
+        _error = error.toString();
+      });
+    });
+
+    // Listen for changes in auth state
     AuthService.authStateChanges.listen((user) {
       if (user != null) {
         widget.onLoginSuccess?.call();
