@@ -1,5 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
+
+import '../ui/login.dart';
+import '../ui/profile.dart';
+import '../ui/user_directory_page.dart';
 
 class CustomNavBar extends StatefulWidget {
   const CustomNavBar({super.key});
@@ -11,29 +17,163 @@ class CustomNavBar extends StatefulWidget {
 class _CustomNavBarState extends State<CustomNavBar> {
   bool isExpanded = false;
 
-  void _showSearchOrAddNameDialog() {
-    // TODO: Implement your dialog logic
-  }
+  Future<void> _handleLoginOrProfile() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-  void _openUserDirectory() {
-    // TODO: Implement your directory logic
-  }
-
-  void _showVoodooDialog() {
-    // TODO: Implement your summon dialog logic
-  }
-
-  void _handleLoginOrProfile() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      Navigator.pushNamed(context, '/login');
+    if (currentUser == null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
     } else {
-      Navigator.pushNamed(context, '/profile');
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfilePage()),
+      );
+    }
+    setState(() {});
+  }
+
+  Future<void> _handleLogout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out')),
+      );
+      setState(() {});
     }
   }
 
-  void _handleLogout() async {
-    await FirebaseAuth.instance.signOut();
+  void _showSearchOrAddNameDialog() {
+    final TextEditingController nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Enter a name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          onSubmitted: (_) => _submitName(nameController),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _submitName(nameController),
+            child: const Text('Go to Board'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitName(TextEditingController controller) async {
+    final name = controller.text.trim().toLowerCase();
+    if (name.isEmpty) return;
+
+    try {
+      final membersRef = FirebaseFirestore.instance.collection('members');
+      final existing = await membersRef.doc(name).get();
+
+      if (!existing.exists) {
+        await membersRef.doc(name).set({});
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+        _navigateToBoard(name);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  void _navigateToBoard(String name) {
+    Navigator.pushNamed(context, '/nameBoard', arguments: name);
+  }
+
+  Future<void> _openUserDirectory() async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => Dialog(
+        child: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: UserDirectoryPage(
+            onUserSelected: (name) {
+              Navigator.of(context).pop(name);
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (selected != null) {
+      _navigateToBoard(selected);
+    }
+  }
+
+  void _showVoodooDialog() async {
+    const hexMessage =
+        'You have been summoned! 👁️\n\nClick the link below or paste this message somewhere for someone to discover your name:\n\n'
+        'https://voodooboard.netlify.app/';
+
+    await Clipboard.setData(ClipboardData(text: hexMessage));
+    final TextEditingController hexController =
+        TextEditingController(text: hexMessage);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Voodoo Summoning Ready!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '🔮 The summoning message has been copied to your clipboard!\n\n'
+              'Go ahead and paste it somewhere — watch the magic happen as they come to their board page!\n\nMessage:',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: hexController,
+              maxLines: null,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: true,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it!'),
+          ),
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: hexController.text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Summoning copied to clipboard — send it to someone!'),
+                ),
+              );
+            },
+            child: const Text('Copy'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -73,63 +213,58 @@ class _CustomNavBarState extends State<CustomNavBar> {
                   ),
                 ),
               ),
-            // Flexible lets it size with available space
-            Flexible(
-              child: ClipRect(
-                child: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _NavButton(
+                            icon: Icons.person_add,
+                            label: 'Add',
+                            onTap: _showSearchOrAddNameDialog),
+                        _NavButton(
+                            icon: Icons.search,
+                            label: 'Search',
+                            onTap: _openUserDirectory),
+                        _NavButton(
+                            icon: Icons.send,
+                            label: 'Summon',
+                            onTap: _showVoodooDialog),
+                        _NavButton(
+                          icon: user == null ? Icons.login : Icons.person,
+                          label: user == null ? 'Login' : 'Profile',
+                          onTap: _handleLoginOrProfile,
+                        ),
+                        if (user != null)
+                          _NavButton(
+                              icon: Icons.logout,
+                              label: 'Logout',
+                              onTap: _handleLogout),
+                      ],
+                    ),
+                    if (isExpanded && user != null) ...[
+                      const SizedBox(height: 16),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _NavButton(
-                              icon: Icons.person_add,
-                              label: 'Add',
-                              onTap: _showSearchOrAddNameDialog),
-                          _NavButton(
-                              icon: Icons.search,
-                              label: 'Search',
-                              onTap: _openUserDirectory),
-                          _NavButton(
-                              icon: Icons.send,
-                              label: 'Summon',
-                              onTap: _showVoodooDialog),
-                          _NavButton(
-                            icon: user == null ? Icons.login : Icons.person,
-                            label: user == null ? 'Login' : 'Profile',
-                            onTap: _handleLoginOrProfile,
+                            icon: Icons.group_add,
+                            label: 'Community',
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Coming soon: Community creation')),
+                              );
+                            },
                           ),
-                          if (user != null)
-                            _NavButton(
-                                icon: Icons.logout,
-                                label: 'Logout',
-                                onTap: _handleLogout),
                         ],
                       ),
-                      if (isExpanded && user != null) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _NavButton(
-                              icon: Icons.group_add,
-                              label: 'Community',
-                              onTap: () {
-                                // TODO: Implement create community logic
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Coming soon: Community creation')),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -153,16 +288,16 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return MaterialButton(
+      onPressed: onTap,
+      minWidth: 50,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-          ),
+          Icon(icon, size: 26, color: Colors.white),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(fontSize: 11, color: Colors.white)),
         ],
       ),
     );
