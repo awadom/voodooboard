@@ -1,10 +1,9 @@
-
+//ui/trending_board.dart
 import 'package:flutter/material.dart';
-import '../routes.dart';
 import '../services/firestore_service.dart';
 import '../app.dart'; // for routeObserver
 import '../ui/custom_nav_bar.dart';
-
+import 'package:go_router/go_router.dart';
 
 class TrendingBoardsPage extends StatefulWidget {
   const TrendingBoardsPage({super.key});
@@ -43,7 +42,7 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
   }
 
   void _navigateToBoard(String name) {
-    Navigator.pushNamed(context, AppRoutes.nameBoard, arguments: name);
+    context.go('/$name');
   }
 
   Widget _buildTrendingSection(String title, List<String> names, Icon icon) {

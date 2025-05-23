@@ -1,3 +1,5 @@
+// ui/home_page.dart
+
 import 'package:flutter/material.dart';
 import 'message_panel.dart';
 import '../ui/custom_nav_bar.dart';
@@ -12,13 +14,11 @@ class VoodooBoardHomePage extends StatefulWidget {
 
 class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
   late String selectedMember;
-  final List<String> members = [];
 
   @override
   void initState() {
     super.initState();
     selectedMember = widget.name.toLowerCase();
-    members.add(selectedMember);
   }
 
   @override

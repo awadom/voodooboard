@@ -1,8 +1,10 @@
+// app.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:voodoo_board/utils/theme.dart';
 import './ui/trending_board.dart';
-import './ui/home_page.dart'; // your home page
+import './ui/home_page.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
