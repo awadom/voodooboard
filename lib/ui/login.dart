@@ -52,22 +52,15 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signInWithGoogle() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
     try {
-      final user = await AuthService.signInWithGoogle();
-      if (user != null) {
-        // ✅ Just call the success callback
-        widget.onLoginSuccess?.call();
-      } else {
-        setState(() => _error = "Google Sign-In canceled");
-      }
-    } on FirebaseAuthException catch (e) {
-      setState(() => _error = e.message);
-    } finally {
-      setState(() => _loading = false);
+      final googleProvider = GoogleAuthProvider();
+      await FirebaseAuth.instance.signInWithRedirect(googleProvider);
+      // After redirect, getRedirectResult() will complete login
+    } catch (e) {
+      print('Google sign-in error: $e');
+      setState(() {
+        _error = e.toString();
+      });
     }
   }
 
