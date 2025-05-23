@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'ui/trending_board.dart';
 import 'ui/home_page.dart';
-import 'ui/login.dart'; // <-- Add this line
-
+import 'ui/login.dart';
 class AppRoutes {
   static const String home = '/';
   static const String nameBoard = '/nameBoard';
-  static const String login = '/login'; // <-- Add this line
+  static const String login = '/login'; 
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -21,7 +20,7 @@ class AppRoutes {
         );
       case login:
         return MaterialPageRoute(
-          builder: (_) => const LoginPage(), // <-- Navigate to LoginPage
+          builder: (_) => const LoginPage(), 
         );
       default:
         return MaterialPageRoute(

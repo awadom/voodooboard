@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import '../app.dart'; // for routeObserver
 import '../ui/custom_nav_bar.dart';
-// Removed go_router import
 
 class TrendingBoardsPage extends StatefulWidget {
   const TrendingBoardsPage({super.key});
