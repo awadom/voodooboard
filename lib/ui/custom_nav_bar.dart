@@ -223,6 +223,11 @@ class _CustomNavBarState extends State<CustomNavBar> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _NavButton(
+                          icon: Icons.trending_up,
+                          label: 'Trending',
+                          onTap: () => widget.onNavigate(ShellPage.trending),
+                        ),
+                        _NavButton(
                             icon: Icons.person_add,
                             label: 'Add',
                             onTap: _showSearchOrAddNameDialog),
