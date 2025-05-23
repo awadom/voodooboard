@@ -6,13 +6,22 @@ import '../ui/user_directory_page.dart';
 import 'main_shell.dart'; // for ShellPage enum
 
 class CustomNavBar extends StatefulWidget {
-  final void Function(ShellPage page, {String? name}) onNavigate;
+  final void Function(ShellPage page,
+      {String? name, VoidCallback? onCancelLogin}) onNavigate;
   final ShellPage currentPage;
+
+  // NEW parameters:
+  final bool isExpanded;
+  final bool isLoggedIn;
+  final VoidCallback onToggleExpansion;
 
   const CustomNavBar({
     super.key,
     required this.onNavigate,
     required this.currentPage,
+    required this.isExpanded,
+    required this.isLoggedIn,
+    required this.onToggleExpansion,
   });
 
   @override
@@ -20,18 +29,18 @@ class CustomNavBar extends StatefulWidget {
 }
 
 class _CustomNavBarState extends State<CustomNavBar> {
-  bool isExpanded = false;
-
   Future<void> _handleLoginOrProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Notify shell to show login page
-      widget.onNavigate(ShellPage.login);
+      widget.onNavigate(
+        ShellPage.login,
+        onCancelLogin: () {
+          widget.onNavigate(ShellPage.trending);
+        },
+      );
     } else {
-      // Navigate to profile page in a full-screen route (not in shell)
       widget.onNavigate(ShellPage.profile);
-
-      setState(() {}); // refresh nav bar after returning from profile
+      if (mounted) setState(() {});
     }
   }
 
@@ -42,7 +51,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
         const SnackBar(content: Text('Logged out')),
       );
       setState(() {});
-      widget.onNavigate(ShellPage.trending); // Go back to trending after logout
+      widget.onNavigate(ShellPage.trending);
     }
   }
 
@@ -117,7 +126,6 @@ class _CustomNavBarState extends State<CustomNavBar> {
     );
 
     if (selected != null) {
-      // Always navigate even if it's the same ShellPage.nameBoard
       widget.onNavigate(ShellPage.nameBoard, name: selected);
     }
   }
@@ -182,18 +190,14 @@ class _CustomNavBarState extends State<CustomNavBar> {
     return GestureDetector(
       onVerticalDragEnd: (details) {
         if (details.primaryVelocity! < 0) {
-          setState(() {
-            isExpanded = true;
-          });
+          widget.onToggleExpansion();
         } else if (details.primaryVelocity! > 0) {
-          setState(() {
-            isExpanded = false;
-          });
+          widget.onToggleExpansion();
         }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        height: isExpanded ? 140 : 70,
+        height: widget.isExpanded ? 140 : 70,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary,
           boxShadow: const [BoxShadow(blurRadius: 4)],
@@ -249,7 +253,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
                               onTap: _handleLogout),
                       ],
                     ),
-                    if (isExpanded && user != null) ...[
+                    if (widget.isExpanded && user != null) ...[
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,

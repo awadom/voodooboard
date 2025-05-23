@@ -21,36 +21,39 @@ class _MainShellPageState extends State<MainShellPage> {
   String? _selectedName;
   String? _selectedMemberId;
 
-  void _navigateTo(ShellPage page, {String? name, String? memberId}) {
+  // New state for expanded nav bar
+  bool _isNavBarExpanded = false;
+
+  void _navigateTo(ShellPage page,
+      {String? name, String? memberId, VoidCallback? onCancelLogin}) {
     setState(() {
+      // When navigating away, collapse nav bar
+      _isNavBarExpanded = false;
+
       if (page == ShellPage.login) {
-        // Remember current page before going to login
         _previousPage = _currentPage;
       }
 
-      // Update selected name only when going to nameBoard
       if (page == ShellPage.nameBoard && name != null) {
         _selectedName = name.toLowerCase();
       } else if (page != ShellPage.nameBoard) {
-        // Only clear if we're leaving nameBoard page
         _selectedName = null;
       }
 
-      // Update selected memberId only when going to messagePanel
       if (page == ShellPage.messagePanel && memberId != null) {
         _selectedMemberId = memberId;
       } else if (page != ShellPage.messagePanel) {
-        // Only clear if we're leaving messagePanel page
         _selectedMemberId = null;
       }
 
-      // Update current page regardless, to force rebuild
       _currentPage = page;
     });
   }
 
   void _returnAfterLogin() {
     setState(() {
+      _isNavBarExpanded = false;
+
       if (_previousPage == ShellPage.nameBoard && _selectedName != null) {
         _currentPage = ShellPage.nameBoard;
       } else if (_previousPage != null) {
@@ -58,7 +61,14 @@ class _MainShellPageState extends State<MainShellPage> {
       } else {
         _currentPage = ShellPage.trending;
       }
-      _previousPage = null; // clear previous page after returning
+      _previousPage = null;
+    });
+  }
+
+  // Toggle nav bar expansion state
+  void _toggleNavBarExpansion() {
+    setState(() {
+      _isNavBarExpanded = !_isNavBarExpanded;
     });
   }
 
@@ -89,14 +99,37 @@ class _MainShellPageState extends State<MainShellPage> {
     }
   }
 
+  // Simulated login state (you may want to replace with real auth check)
+  bool get isLoggedIn => _currentPage != ShellPage.login;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildPage(),
+      body: GestureDetector(
+        onVerticalDragUpdate: (details) {
+          if (details.delta.dy < -10) {
+            // Swipe up - expand nav bar
+            if (!_isNavBarExpanded) {
+              _toggleNavBarExpansion();
+            }
+          } else if (details.delta.dy > 10) {
+            // Swipe down - collapse nav bar
+            if (_isNavBarExpanded) {
+              _toggleNavBarExpansion();
+            }
+          }
+        },
+        child: _buildPage(),
+      ),
       bottomNavigationBar: CustomNavBar(
         currentPage: _currentPage,
-        onNavigate: (page, {String? name, String? memberId}) {
-          _navigateTo(page, name: name, memberId: memberId);
+        isExpanded: _isNavBarExpanded,
+        isLoggedIn: isLoggedIn,
+        onToggleExpansion: _toggleNavBarExpansion,
+        onNavigate: (page,
+            {String? name, String? memberId, VoidCallback? onCancelLogin}) {
+          _navigateTo(page,
+              name: name, memberId: memberId, onCancelLogin: onCancelLogin);
         },
       ),
     );
