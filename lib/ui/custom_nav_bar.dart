@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import '../ui/profile.dart';
 import '../ui/user_directory_page.dart';
 import 'main_shell.dart'; // for ShellPage enum
 
@@ -30,10 +29,8 @@ class _CustomNavBarState extends State<CustomNavBar> {
       widget.onNavigate(ShellPage.login);
     } else {
       // Navigate to profile page in a full-screen route (not in shell)
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ProfilePage()),
-      );
+      widget.onNavigate(ShellPage.profile);
+
       setState(() {}); // refresh nav bar after returning from profile
     }
   }
@@ -120,6 +117,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
     );
 
     if (selected != null) {
+      // Always navigate even if it's the same ShellPage.nameBoard
       widget.onNavigate(ShellPage.nameBoard, name: selected);
     }
   }

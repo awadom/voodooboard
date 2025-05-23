@@ -24,27 +24,28 @@ class _MainShellPageState extends State<MainShellPage> {
   void _navigateTo(ShellPage page, {String? name, String? memberId}) {
     setState(() {
       if (page == ShellPage.login) {
-        // Save current state before login
+        // Remember current page before going to login
         _previousPage = _currentPage;
       }
 
-      _currentPage = page;
-
-      if (page == ShellPage.nameBoard) {
-        if (name != null) {
-          _selectedName = name.toLowerCase();
-        }
-      } else if (page == ShellPage.login) {
-        // Preserve _selectedName if coming from nameBoard
-      } else {
+      // Update selected name only when going to nameBoard
+      if (page == ShellPage.nameBoard && name != null) {
+        _selectedName = name.toLowerCase();
+      } else if (page != ShellPage.nameBoard) {
+        // Only clear if we're leaving nameBoard page
         _selectedName = null;
       }
 
+      // Update selected memberId only when going to messagePanel
       if (page == ShellPage.messagePanel && memberId != null) {
         _selectedMemberId = memberId;
       } else if (page != ShellPage.messagePanel) {
+        // Only clear if we're leaving messagePanel page
         _selectedMemberId = null;
       }
+
+      // Update current page regardless, to force rebuild
+      _currentPage = page;
     });
   }
 
@@ -57,7 +58,7 @@ class _MainShellPageState extends State<MainShellPage> {
       } else {
         _currentPage = ShellPage.trending;
       }
-      _previousPage = null;
+      _previousPage = null; // clear previous page after returning
     });
   }
 

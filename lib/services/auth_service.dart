@@ -22,6 +22,12 @@ class AuthService {
   /// Google Sign-In with proper handling for web (popup/redirect) and iOS Safari
   static Future<User?> signInWithGoogle() async {
     if (kIsWeb) {
+      // Try to finalize any redirect sign-in before starting a new one
+      final result = await _auth.getRedirectResult();
+      if (result.user != null) {
+        return result.user;
+      }
+
       final provider = GoogleAuthProvider();
       final ua = html.window.navigator.userAgent.toLowerCase();
       final isIosSafari = ua.contains('safari') &&
@@ -30,9 +36,7 @@ class AuthService {
           !ua.contains('fxios');
 
       if (isIosSafari) {
-        // Trigger the redirect flow.
         await _auth.signInWithRedirect(provider);
-        // After redirect, do not try to get the result immediately.
         return null;
       } else {
         try {
