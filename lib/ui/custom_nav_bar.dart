@@ -1,14 +1,20 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-
-import '../ui/login.dart';
 import '../ui/profile.dart';
 import '../ui/user_directory_page.dart';
+import 'main_shell.dart'; // for ShellPage enum
 
 class CustomNavBar extends StatefulWidget {
-  const CustomNavBar({super.key});
+  final void Function(ShellPage page, {String? name}) onNavigate;
+  final ShellPage currentPage;
+
+  const CustomNavBar({
+    super.key,
+    required this.onNavigate,
+    required this.currentPage,
+  });
 
   @override
   State<CustomNavBar> createState() => _CustomNavBarState();
@@ -18,20 +24,18 @@ class _CustomNavBarState extends State<CustomNavBar> {
   bool isExpanded = false;
 
   Future<void> _handleLoginOrProfile() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    if (currentUser == null) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Notify shell to show login page
+      widget.onNavigate(ShellPage.login);
     } else {
+      // Navigate to profile page in a full-screen route (not in shell)
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ProfilePage()),
       );
+      setState(() {}); // refresh nav bar after returning from profile
     }
-    setState(() {});
   }
 
   Future<void> _handleLogout() async {
@@ -41,6 +45,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
         const SnackBar(content: Text('Logged out')),
       );
       setState(() {});
+      widget.onNavigate(ShellPage.trending); // Go back to trending after logout
     }
   }
 
@@ -87,7 +92,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
 
       if (mounted) {
         Navigator.pop(context);
-        _navigateToBoard(name);
+        widget.onNavigate(ShellPage.nameBoard, name: name);
       }
     } catch (e) {
       if (mounted) {
@@ -96,10 +101,6 @@ class _CustomNavBarState extends State<CustomNavBar> {
         );
       }
     }
-  }
-
-  void _navigateToBoard(String name) {
-    Navigator.pushNamed(context, '/nameBoard', arguments: name);
   }
 
   Future<void> _openUserDirectory() async {
@@ -119,7 +120,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
     );
 
     if (selected != null) {
-      _navigateToBoard(selected);
+      widget.onNavigate(ShellPage.nameBoard, name: selected);
     }
   }
 
@@ -291,14 +292,17 @@ class _NavButton extends StatelessWidget {
     return MaterialButton(
       onPressed: onTap,
       minWidth: 50,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 26, color: Colors.white),
-          const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(fontSize: 11, color: Colors.white)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(top: 5.0), // 👈 Add top padding here
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 26, color: Colors.white),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(fontSize: 11, color: Colors.white)),
+          ],
+        ),
       ),
     );
   }

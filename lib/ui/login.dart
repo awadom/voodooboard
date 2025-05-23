@@ -3,7 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? currentMemberName;
+  final VoidCallback? onLoginSuccess;
+
+  const LoginPage({
+    super.key,
+    this.currentMemberName,
+    this.onLoginSuccess,
+  });
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -34,7 +42,8 @@ class _LoginPageState extends State<LoginPage> {
           password: _passwordController.text,
         );
       }
-      Navigator.pop(context);
+      // ✅ Just call the success callback
+      widget.onLoginSuccess?.call();
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -50,7 +59,8 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final user = await AuthService.signInWithGoogle();
       if (user != null) {
-        Navigator.pop(context);
+        // ✅ Just call the success callback
+        widget.onLoginSuccess?.call();
       } else {
         setState(() => _error = "Google Sign-In canceled");
       }

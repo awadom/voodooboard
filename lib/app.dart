@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:voodoo_board/utils/theme.dart';
-import 'routes.dart'; // Import your custom routes
-
-final RouteObserver<ModalRoute<void>> routeObserver =
-    RouteObserver<ModalRoute<void>>();
+import '/ui/main_shell.dart';
 
 class VoodooBoardApp extends StatelessWidget {
   const VoodooBoardApp({super.key});
@@ -16,9 +13,8 @@ class VoodooBoardApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      navigatorObservers: [routeObserver],
-      initialRoute: AppRoutes.home,
-      onGenerateRoute: AppRoutes.generateRoute,
+      home: const MainShellPage(),
+      // No more onGenerateRoute or initialRoute needed
     );
   }
 }

@@ -2,11 +2,17 @@
 
 import 'package:flutter/material.dart';
 import 'message_panel.dart';
-import '../ui/custom_nav_bar.dart';
+import 'main_shell.dart'; // for ShellPage enum
 
 class VoodooBoardHomePage extends StatefulWidget {
   final String name;
-  const VoodooBoardHomePage({super.key, required this.name});
+  final void Function(ShellPage page, {String? name})? onNavigate;
+
+  const VoodooBoardHomePage({
+    super.key,
+    required this.name,
+    this.onNavigate,
+  });
 
   @override
   State<VoodooBoardHomePage> createState() => _VoodooBoardHomePageState();
@@ -29,7 +35,15 @@ class _VoodooBoardHomePageState extends State<VoodooBoardHomePage> {
         centerTitle: true,
       ),
       body: MessagePanel(memberId: selectedMember),
-      bottomNavigationBar: const CustomNavBar(),
+      // Remove this to avoid duplicate nav bars:
+      // bottomNavigationBar: CustomNavBar(
+      //   onNavigate: (page, {name}) {
+      //     if (widget.onNavigate != null) {
+      //       widget.onNavigate!(page, name: name);
+      //     }
+      //   },
+      //   currentPage: ShellPage.nameBoard,
+      // ),
     );
   }
 }

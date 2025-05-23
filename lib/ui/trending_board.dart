@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
-import '../app.dart'; // for routeObserver
-import '../ui/custom_nav_bar.dart';
 
 class TrendingBoardsPage extends StatefulWidget {
-  const TrendingBoardsPage({super.key});
+  /// Callback to tell shell which name board to show
+  final void Function(String name)? onNameSelected;
+
+  const TrendingBoardsPage({Key? key, this.onNameSelected}) : super(key: key);
 
   @override
   State<TrendingBoardsPage> createState() => _TrendingBoardsPageState();
 }
 
-class _TrendingBoardsPageState extends State<TrendingBoardsPage>
-    with RouteAware {
+class _TrendingBoardsPageState extends State<TrendingBoardsPage> {
   late Future<Map<String, List<String>>> _trendingNamesFuture;
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -25,27 +25,6 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
     setState(() {
       _trendingNamesFuture = _firestoreService.getTrendingNames(topN: 10);
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  void _navigateToBoard(String name) {
-    // Use Navigator with named route and argument as per routes.dart
-    Navigator.pushNamed(
-      context,
-      '/nameBoard',
-      arguments: name,
-    );
   }
 
   Widget _buildTrendingSection(String title, List<String> names, Icon icon) {
@@ -63,7 +42,11 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
           (name) => ListTile(
             leading: icon,
             title: Text(name),
-            onTap: () => _navigateToBoard(name),
+            onTap: () {
+              if (widget.onNameSelected != null) {
+                widget.onNameSelected!(name);
+              }
+            },
           ),
         ),
         const SizedBox(height: 24),
@@ -73,45 +56,39 @@ class _TrendingBoardsPageState extends State<TrendingBoardsPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trending Name Boards'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: FutureBuilder<Map<String, List<String>>>(
-          future: _trendingNamesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            final data = snapshot.data ?? {};
-            final mostActive = data['mostActive'] ?? [];
-            final gainingEnergy = data['gainingEnergy'] ?? [];
+    // We remove Scaffold and AppBar because shell handles that
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: FutureBuilder<Map<String, List<String>>>(
+        future: _trendingNamesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final data = snapshot.data ?? {};
+          final mostActive = data['mostActive'] ?? [];
+          final gainingEnergy = data['gainingEnergy'] ?? [];
 
-            return ListView(
-              children: [
-                _buildTrendingSection(
-                  'Most Active Names Today',
-                  mostActive,
-                  const Icon(Icons.local_fire_department,
-                      color: Colors.deepPurple),
-                ),
-                _buildTrendingSection(
-                  'Names Gaining Energy',
-                  gainingEnergy,
-                  const Icon(Icons.bolt, color: Colors.orange),
-                ),
-              ],
-            );
-          },
-        ),
+          return ListView(
+            children: [
+              _buildTrendingSection(
+                'Most Active Names Today',
+                mostActive,
+                const Icon(Icons.local_fire_department,
+                    color: Colors.deepPurple),
+              ),
+              _buildTrendingSection(
+                'Names Gaining Energy',
+                gainingEnergy,
+                const Icon(Icons.bolt, color: Colors.orange),
+              ),
+            ],
+          );
+        },
       ),
-      bottomNavigationBar: const CustomNavBar(),
     );
   }
 }

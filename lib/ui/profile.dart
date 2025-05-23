@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../ui/custom_nav_bar.dart';
+import '../ui/main_shell.dart'; // Import ShellPage enum
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    // After sign out, go back to the home page or login page as needed
+    // After sign out, go back to the first route (home or login page)
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -54,7 +55,14 @@ class ProfilePage extends StatelessWidget {
                 ),
         ),
       ),
-      bottomNavigationBar: const CustomNavBar(),
+      bottomNavigationBar: CustomNavBar(
+        currentPage: ShellPage.profile, // <-- provide current page here
+        onNavigate: (page, {name}) {
+          // Optionally handle navigation here, or pass to parent if needed
+          // For now, just do nothing or Navigator push/pop as needed
+          // Example: Navigator.pushNamed(context, page.routeName);
+        },
+      ),
     );
   }
 }
