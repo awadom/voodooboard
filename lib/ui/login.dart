@@ -25,6 +25,17 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    // Handle redirect results (only relevant on web)
+    AuthService.authStateChanges.listen((user) {
+      if (user != null) {
+        widget.onLoginSuccess?.call();
+      }
+    });
+  }
+
   Future<void> _handleEmailAuth() async {
     setState(() {
       _loading = true;
@@ -42,8 +53,6 @@ class _LoginPageState extends State<LoginPage> {
           password: _passwordController.text,
         );
       }
-      // ✅ Just call the success callback
-      widget.onLoginSuccess?.call();
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -52,83 +61,99 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signInWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final googleProvider = GoogleAuthProvider();
-      await FirebaseAuth.instance.signInWithRedirect(googleProvider);
-      // After redirect, getRedirectResult() will complete login
+      await AuthService.signInWithGoogle();
     } catch (e) {
       print('Google sign-in error: $e');
-      setState(() {
-        _error = e.toString();
-      });
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _loading = false);
     }
   }
 
-  Future<void> _signOut() => AuthService.signOut();
+  Future<void> _signOut() async {
+    await AuthService.signOut();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthService.currentUser;
     return Scaffold(
       appBar: AppBar(title: const Text("Login")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (user == null) ...[
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Password"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Checkbox(
-                    value: _isRegistering,
-                    onChanged: (val) => setState(() => _isRegistering = val!),
+      body: StreamBuilder<User?>(
+        stream: AuthService.authStateChanges,
+        builder: (context, snapshot) {
+          final user = snapshot.data;
+
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (user == null) ...[
+                  TextField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: "Email"),
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                  const Text("Register new account"),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(labelText: "Password"),
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _isRegistering,
+                        onChanged: (val) =>
+                            setState(() => _isRegistering = val!),
+                      ),
+                      const Text("Register new account"),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            if (_loading)
-              const Center(child: CircularProgressIndicator())
-            else if (user == null) ...[
-              ElevatedButton(
-                onPressed: _handleEmailAuth,
-                child: Text(
-                  _isRegistering ? "Register" : "Sign in with Email",
-                ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _signInWithGoogle,
-                icon: const Icon(Icons.login),
-                label: const Text("Sign in with Google"),
-              ),
-            ] else ...[
-              Text("Signed in as: ${user.email ?? user.displayName}"),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _signOut,
-                icon: const Icon(Icons.logout),
-                label: const Text("Sign Out"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              ),
-            ],
-          ],
-        ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(_error!,
+                        style: const TextStyle(color: Colors.red)),
+                  ),
+                if (_loading)
+                  const Center(child: CircularProgressIndicator())
+                else if (user == null) ...[
+                  ElevatedButton(
+                    onPressed: _handleEmailAuth,
+                    child: Text(
+                      _isRegistering ? "Register" : "Sign in with Email",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _signInWithGoogle,
+                    icon: const Icon(Icons.login),
+                    label: const Text("Sign in with Google"),
+                  ),
+                ] else ...[
+                  Text("Signed in as: ${user.email ?? user.displayName}"),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: _signOut,
+                    icon: const Icon(Icons.logout),
+                    label: const Text("Sign Out"),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
