@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:voodoo_board/utils/theme.dart';
-import './/ui/trending_board.dart'; // your TrendingBoardPage
-import './/ui//message_panel.dart'; // your MessagePanel widget
+import './ui/trending_board.dart';
+import './ui/home_page.dart'; // your home page
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
-// Define your router with go_router
 final GoRouter router = GoRouter(
   observers: [routeObserver],
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => TrendingBoardsPage(),
+      builder: (context, state) => const TrendingBoardsPage(),
     ),
     GoRoute(
       path: '/:memberId',
       builder: (context, state) {
         final memberId = state.pathParameters['memberId']!;
-        return MessagePanel(memberId: memberId);
+        return VoodooBoardHomePage(name: memberId);
       },
     ),
   ],
