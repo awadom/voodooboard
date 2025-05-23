@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../ui/custom_nav_bar.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -53,6 +54,7 @@ class ProfilePage extends StatelessWidget {
                 ),
         ),
       ),
+      bottomNavigationBar: const CustomNavBar(),
     );
   }
 }

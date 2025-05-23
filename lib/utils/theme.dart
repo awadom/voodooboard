@@ -1,11 +1,33 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
+  // Primary Colors
+  // Changed pinks to subtle purples
+  static const Color _lightPrimary = Color(0xFF957DAD); // Soft muted purple
+  static const Color _lightOnPrimary = Colors.white;
+  static const Color _lightSecondary = Color(0xFFD3CCE3); // Light lavender
+  static const Color _lightSurface = Colors.white;
+
+  static const Color _darkPrimary = Colors.deepPurpleAccent;
+  static const Color _darkSurface = Colors.black;
+
   static ThemeData get light {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      scaffoldBackgroundColor: Colors.white,
+      colorScheme: ColorScheme(
+        brightness: Brightness.light,
+        primary: _lightPrimary,
+        onPrimary: _lightOnPrimary,
+        secondary: _lightSecondary,
+        onSecondary: Colors.black87,
+        error: Colors.red,
+        onError: Colors.white,
+        background: _lightSurface,
+        onBackground: Colors.black,
+        surface: _lightSurface,
+        onSurface: Colors.black,
+      ),
+      scaffoldBackgroundColor: _lightSurface,
       textTheme: ThemeData.light().textTheme,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -23,7 +45,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.deepPurple, width: 1.5),
+          borderSide: BorderSide(color: _lightPrimary, width: 1.5),
         ),
       ),
     );
@@ -31,7 +53,11 @@ class AppTheme {
 
   static ThemeData get dark {
     return ThemeData.dark(useMaterial3: true).copyWith(
-      scaffoldBackgroundColor: Colors.black,
+      colorScheme: ColorScheme.dark().copyWith(
+        primary: _darkPrimary,
+        surface: _darkSurface,
+      ),
+      scaffoldBackgroundColor: _darkSurface,
       textTheme: ThemeData.dark().textTheme,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -49,7 +75,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.deepPurpleAccent, width: 1.5),
+          borderSide: BorderSide(color: _darkPrimary, width: 1.5),
         ),
       ),
     );

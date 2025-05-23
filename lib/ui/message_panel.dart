@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform, kIsWeb;
 
+
 @immutable
 class Message {
   final String id;
@@ -184,6 +185,7 @@ class _MessagePanelState extends State<MessagePanel> {
         child: Text(
           'Select a member to view or leave a message.',
           style: TextStyle(fontSize: 18),
+          
         ),
       );
     }
