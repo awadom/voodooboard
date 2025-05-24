@@ -1,7 +1,6 @@
 // lib/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html; // for userAgent sniffing on web
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
