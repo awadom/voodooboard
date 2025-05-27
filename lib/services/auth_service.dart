@@ -10,7 +10,7 @@ class AuthService {
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   /// Link silently signed-in Google account to Firebase
-  static Future<void> linkSilentAccount(GoogleSignInAccount account) async {
+  static Future<void><void> linkSilentAccount(GoogleSignInAccount account) async {
     final googleAuth = await account.authentication;
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
@@ -25,30 +25,27 @@ class AuthService {
     }
   }
 
-  /// Cross-platform Google Sign-In
-  static Future<void> signInWithGoogle() async {
+  /// Google Sign-In with popup fallback to redirect
+  static Future<User?> signInWithGoogle() async {
     if (kIsWeb) {
       final provider = GoogleAuthProvider();
-
       try {
-        // Try popup first
-        await _auth.signInWithPopup(provider);
+        final cred = await _auth.signInWithPopup(provider);
+        return cred.user;
       } on FirebaseAuthException catch (e) {
-        print('Popup sign-in failed: ${e.code}');
-        // Fallback to redirect if popup fails
-        if (e.code == 'popup-blocked' ||
-            e.code == 'popup-closed-by-user' ||
-            e.code == 'web-context-cancelled') {
+        if (e.code == 'auth/popup-blocked' ||
+            e.code == 'auth/popup-closed-by-user' ||
+            e.code == 'auth/web-storage-unsupported') {
           await _auth.signInWithRedirect(provider);
-        } else {
-          rethrow;
+          return null; // Handle after redirect
         }
+        rethrow;
       }
     } else {
-      // Mobile/native sign-in
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return;
-
+      // Mobile (Android/iOS) flow
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return null;
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -59,16 +56,11 @@ class AuthService {
     }
   }
 
-  /// Sign out from Firebase and Google (if mobile)
+  /// Sign out from Firebase and Google (if on mobile)
   static Future<void> signOut() async {
-    try {
-      if (!kIsWeb) {
-        await GoogleSignIn().signOut();
-      }
-      await _auth.signOut();
-    } catch (e) {
-      print('Sign out error: $e');
-      rethrow;
+    if (!kIsWeb) {
+      await GoogleSignIn().signOut();
     }
+    await _auth.signOut();
   }
 }
