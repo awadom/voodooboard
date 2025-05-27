@@ -1,17 +1,14 @@
 {
   "images" : [
     {
-      "filename" : "create a fun and playful launch screen for the VoodooBoard app, emphasizing its anonymous and interactive message board concept.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "create a fun and playful launch screen for the VoodooBoard app, emphasizing its anonymous and interactive message board concept 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "create a fun and playful launch screen for the VoodooBoard app, emphasizing its anonymous and interactive message board concept 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
