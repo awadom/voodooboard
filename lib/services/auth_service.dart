@@ -10,7 +10,7 @@ class AuthService {
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   /// Link silently signed-in Google account to Firebase
-  static Future<void><void> linkSilentAccount(GoogleSignInAccount account) async {
+  static Future<void> linkSilentAccount(GoogleSignInAccount account) async {
     final googleAuth = await account.authentication;
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
@@ -54,6 +54,7 @@ class AuthService {
 
       await _auth.signInWithCredential(credential);
     }
+    return null;
   }
 
   /// Sign out from Firebase and Google (if on mobile)
